@@ -16,7 +16,7 @@ gem install intent-record
 
 On first run a config directory is created at `~/.intent-record/` with the database at `~/.intent-record/intent-record.db`. Edit `~/.intent-record/config.yml` to move the database.
 
-To use a different store for one command, pass `--config-dir <dir>` before or after the command name. `INTENT_RECORD_CONFIG_DIR` does the same for a whole shell. The two part ways when you are trying to stay out of your own records: a misspelled variable name is ignored without a word and the command goes to `~/.intent-record`, while a misspelled flag is refused.
+To use a different store for one command, pass `--config-dir <dir>` before or after the command name. `INTENT_RECORD_CONFIG_DIR` does the same for a whole shell, except that a misspelled variable name is ignored without a word while a misspelled flag is refused.
 
 ```bash
 intent-record --config-dir /tmp/scratch recent
@@ -79,7 +79,7 @@ JSON in on stdin where input is needed, JSON out on stdout, exit code 0 on succe
 
 Options take either `--name value` or `--name=value`. Unknown options and stray arguments are rejected rather than ignored.
 
-`lookup` without `--vcs` searches every system and prefers an exact id match over a prefix match. The same id can exist in two systems, a Perforce changelist and a Subversion revision that happen to spell the same, and then the lookup reports the ambiguity instead of picking one, so pass `--vcs` to say which you meant. Git commits must be full SHA-1 or SHA-256 hashes; they are stored lowercase. Prefix lookup applies to hash-based systems only (git, mercurial, fossil, sapling, pijul, darcs), so a Perforce changelist `1234` never matches `12345`. URIs are normalised (lowercase scheme and host, no trailing slash) and system names are lowercased and hyphenated, so `Jira` and `jira`, or a ticket URL with and without a trailing slash, are one source. A later non-blank `title` for a source replaces the stored one.
+`lookup` without `--vcs` searches every system and prefers an exact id match over a prefix match. Git commits must be full SHA-1 or SHA-256 hashes; they are stored lowercase. Prefix lookup applies to hash-based systems only (git, mercurial, fossil, sapling, pijul, darcs), so a Perforce changelist `1234` never matches `12345`. URIs are normalised (lowercase scheme and host, no trailing slash) and system names are lowercased and hyphenated, so `Jira` and `jira`, or a ticket URL with and without a trailing slash, are one source. A later non-blank `title` for a source replaces the stored one.
 
 `record` and `attach` both return the full intent record. A record's commits, stakeholder references and related intents come back in the order they were attached.
 
@@ -87,7 +87,7 @@ An intent can be recorded before the commit exists and linked with `attach` afte
 
 ## Data model
 
-Commit hashes are treated as globally unique, so the store does not track which repository a commit belongs to. VCS and stakeholder system names are lowercased on the way in, and the common ones are seeded on first connect (git, mercurial, perforce, jira, confluence, linear, github-issues, notion, slack and around forty more; `intent-record systems` lists them). Unknown names are added on first use.
+Commit hashes are treated as globally unique, so the store does not track which repository a commit belongs to. VCS and stakeholder system names are lowercased on the way in, and the common ones are seeded on first connect; `intent-record systems` lists them. Unknown names are added on first use.
 
 ```
 vcs_systems            (name)
