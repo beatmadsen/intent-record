@@ -7,7 +7,16 @@ require "timeout"
 class ServeTest < Minitest::Test
   include IntentRecordDsl
 
+  # The only place binding is permitted. It covers the blocker and the boot: the
+  # boot's own bind is meant to fail, and refusing it here would replace the
+  # failure this test is about with a different one.
   def test_a_port_already_in_use_is_reported_as_json
+    PortConfinement.binding_a_port { assert_a_port_in_use_is_reported }
+  end
+
+  private
+
+  def assert_a_port_in_use_is_reported
     blocker = TCPServer.new("127.0.0.1", 0)
     port = blocker.addr[1]
 
