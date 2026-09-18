@@ -6,9 +6,10 @@ require "fileutils"
 require "tmpdir"
 
 # Mutation testing already forks a worker per mutant. Forking again here would
-# multiply processes until the machine runs out of memory, so the mutation lane
-# sets MUTATION_TESTING and takes the serial executor.
-unless ENV["MUTATION_TESTING"]
+# multiply processes until the machine runs out of memory, so a mutation run
+# takes the serial executor. The Mutineer constant covers a direct `mutineer
+# run`; MUTATION_TESTING covers the workers it forks to run the suite.
+unless ENV["MUTATION_TESTING"] || defined?(Mutineer)
   begin
     require "active_support/testing/parallelization"
     require "active_support/testing/parallelize_executor"
