@@ -16,7 +16,7 @@ gem install intent-record
 
 On first run a config directory is created at `~/.intent-record/` with the database at `~/.intent-record/intent-record.db`. Edit `~/.intent-record/config.yml` to move the database.
 
-To use a different store for one command, pass `--config-dir <dir>` before or after the command name. `INTENT_RECORD_CONFIG_DIR` does the same for a whole shell. The two differ where it matters most, when you are trying to stay out of your own records: a misspelled variable name is ignored without a word and the command goes to `~/.intent-record`, while a misspelled flag is refused.
+To use a different store for one command, pass `--config-dir <dir>` before or after the command name. `INTENT_RECORD_CONFIG_DIR` does the same for a whole shell. The two part ways when you are trying to stay out of your own records: a misspelled variable name is ignored without a word and the command goes to `~/.intent-record`, while a misspelled flag is refused.
 
 ```bash
 intent-record --config-dir /tmp/scratch recent
