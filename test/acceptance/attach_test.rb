@@ -10,20 +10,21 @@ class AttachTest < Minitest::Test
 
     run_cli_ok!("attach", id, stdin: { "commits" => [HASH] })
 
-    assert_equal [HASH], run_cli_ok!("show", id)["asset_versions"].map { |v| v["external_id"] }
+    assert_equal([HASH], run_cli_ok!("show", id)["asset_versions"].map { |v| v["external_id"] })
   end
 
   def test_attach_adds_stakeholder_reference_and_related_intent
     earlier = record_intent!["intent_id"]
     id = record_intent!["intent_id"]
 
-    run_cli_ok!("attach", id, stdin: { "stakeholder_references" => [{ "system" => "linear", "uri" => "https://l/ENG-9" }],
-                                       "related_intent_ids" => [earlier] })
+    payload = { "stakeholder_references" => [{ "system" => "linear", "uri" => "https://l/ENG-9" }],
+                "related_intent_ids" => [earlier] }
+    run_cli_ok!("attach", id, stdin: payload)
 
     shown = run_cli_ok!("show", id)
     assert_equal "https://l/ENG-9", shown["stakeholder_references"].sole["uri"]
-    assert_equal [earlier], shown["related_intents"].map { |r| r["intent_id"] }
-    assert_equal [id], run_cli_ok!("show", earlier)["related_by_intents"].map { |r| r["intent_id"] }
+    assert_equal([earlier], shown["related_intents"].map { |r| r["intent_id"] })
+    assert_equal([id], run_cli_ok!("show", earlier)["related_by_intents"].map { |r| r["intent_id"] })
   end
 
   def test_attach_with_nothing_to_attach_is_rejected

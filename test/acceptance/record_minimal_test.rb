@@ -4,7 +4,8 @@ class RecordMinimalTest < Minitest::Test
   include IntentRecordDsl
 
   def test_records_intent_with_summary_and_body
-    json = run_cli_ok!("record", stdin: { "summary" => "Add retry to fetcher", "body" => "Network flakes were biting us." })
+    json = run_cli_ok!("record",
+                       stdin: { "summary" => "Add retry to fetcher", "body" => "Network flakes were biting us." })
 
     assert_global_id json["intent_id"]
     record = IntentRecord::Models::IntentRecord.find_by(global_id: json["intent_id"])

@@ -12,7 +12,8 @@ class ShowTest < Minitest::Test
 
     assert_equal "S", shown["summary"]
     assert_equal "claude", shown["author"]
-    assert_equal [{ "vcs" => "git", "external_id" => "abc1234abc1234abc1234abc1234abc1234abc12" }], shown["asset_versions"]
+    assert_equal [{ "vcs" => "git", "external_id" => "abc1234abc1234abc1234abc1234abc1234abc12" }],
+                 shown["asset_versions"]
     assert_equal "linear", shown["stakeholder_references"].sole["system"]
     assert_match(/\A\d{4}-\d{2}-\d{2}T/, shown["created_at"])
   end

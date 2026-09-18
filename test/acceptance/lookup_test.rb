@@ -22,7 +22,7 @@ class LookupTest < Minitest::Test
 
     json = run_cli_ok!("lookup", HASH[0, 7])
 
-    assert_equal [a["intent_id"]], json["intents"].map { |i| i["intent_id"] }
+    assert_equal([a["intent_id"]], json["intents"].map { |i| i["intent_id"] })
     assert_equal HASH, json["asset_version"]["external_id"], "the full external id is returned"
   end
 

@@ -8,7 +8,10 @@ module IntentRecord
       raise ValidationError, "#{key} is required" if value.nil?
       raise ValidationError, "#{key} must be a string" unless value.is_a?(String)
       raise ValidationError, "#{key} cannot be blank" if value.strip.empty?
-      raise ValidationError, "#{key} must be #{max_length} characters or fewer" if max_length && value.length > max_length
+      if max_length && value.length > max_length
+        raise ValidationError,
+              "#{key} must be #{max_length} characters or fewer"
+      end
 
       value
     end
@@ -38,6 +41,7 @@ module IntentRecord
     def hashes_with!(values, label, *keys)
       values.each do |v|
         raise ValidationError, "#{label} entries must be objects" unless v.is_a?(Hash)
+
         keys.each { |k| required_string!(v, k) }
       end
       values

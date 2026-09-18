@@ -17,7 +17,10 @@ module IntentRecord
 
       candidates = prefix_candidates
       raise NotFoundError, "Asset version not found: #{@external_id}" if candidates.empty?
-      raise ValidationError, "Ambiguous prefix #{@external_id}: matches #{candidates.size} asset versions" if candidates.size > 1
+      if candidates.size > 1
+        raise ValidationError,
+              "Ambiguous prefix #{@external_id}: matches #{candidates.size} asset versions"
+      end
 
       candidates.first
     end

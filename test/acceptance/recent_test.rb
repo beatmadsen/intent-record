@@ -9,7 +9,7 @@ class RecentTest < Minitest::Test
 
     json = run_cli_ok!("recent", "--limit", "2")
 
-    assert_equal [ids[1], ids[0]], json["intents"].map { |i| i["intent_id"] }
+    assert_equal([ids[1], ids[0]], json["intents"].map { |i| i["intent_id"] })
   end
 
   def test_recent_rejects_non_integer_limit

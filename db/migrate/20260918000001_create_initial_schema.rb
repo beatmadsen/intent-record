@@ -11,7 +11,7 @@ class CreateInitialSchema < ActiveRecord::Migration[8.0]
       t.string :external_id, null: false
       t.datetime :created_at, null: false
     end
-    add_index :asset_versions, [:vcs_system_id, :external_id], unique: true
+    add_index :asset_versions, %i[vcs_system_id external_id], unique: true
     add_index :asset_versions, :external_id
 
     create_table :intent_records do |t|
@@ -29,7 +29,7 @@ class CreateInitialSchema < ActiveRecord::Migration[8.0]
       t.references :asset_version, null: false, foreign_key: true
       t.datetime :created_at, null: false
     end
-    add_index :intent_record_asset_versions, [:intent_record_id, :asset_version_id],
+    add_index :intent_record_asset_versions, %i[intent_record_id asset_version_id],
               unique: true, name: "idx_intent_asset_unique"
 
     create_table :stakeholder_systems do |t|
@@ -44,14 +44,14 @@ class CreateInitialSchema < ActiveRecord::Migration[8.0]
       t.string :title
       t.datetime :created_at, null: false
     end
-    add_index :stakeholder_sources, [:stakeholder_system_id, :uri], unique: true
+    add_index :stakeholder_sources, %i[stakeholder_system_id uri], unique: true
 
     create_table :stakeholder_references do |t|
       t.references :intent_record, null: false, foreign_key: true
       t.references :stakeholder_source, null: false, foreign_key: true
       t.datetime :created_at, null: false
     end
-    add_index :stakeholder_references, [:intent_record_id, :stakeholder_source_id],
+    add_index :stakeholder_references, %i[intent_record_id stakeholder_source_id],
               unique: true, name: "idx_stakeholder_ref_unique"
 
     create_table :intent_record_links do |t|
@@ -59,7 +59,7 @@ class CreateInitialSchema < ActiveRecord::Migration[8.0]
       t.bigint :target_intent_record_id, null: false
       t.datetime :created_at, null: false
     end
-    add_index :intent_record_links, [:source_intent_record_id, :target_intent_record_id],
+    add_index :intent_record_links, %i[source_intent_record_id target_intent_record_id],
               unique: true, name: "idx_intent_link_unique"
     add_index :intent_record_links, :target_intent_record_id
     add_foreign_key :intent_record_links, :intent_records, column: :source_intent_record_id

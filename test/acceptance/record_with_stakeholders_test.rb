@@ -3,7 +3,8 @@ require "test_helper"
 class RecordWithStakeholdersTest < Minitest::Test
   include IntentRecordDsl
 
-  JIRA = { "system" => "jira", "uri" => "https://acme.atlassian.net/browse/ACME-42", "title" => "Retry flaky fetch" }.freeze
+  JIRA = { "system" => "jira", "uri" => "https://acme.atlassian.net/browse/ACME-42",
+           "title" => "Retry flaky fetch" }.freeze
 
   def test_links_intent_to_stakeholder_source
     json = record_intent!(stakeholder_references: [JIRA])

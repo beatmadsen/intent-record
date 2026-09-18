@@ -19,7 +19,7 @@ class SearchTest < Minitest::Test
 
     json = run_cli_ok!("search", "retry", "backoff", "--match", "all")
 
-    assert_equal [both["intent_id"]], json["results"].map { |r| r["intent_id"] }
+    assert_equal([both["intent_id"]], json["results"].map { |r| r["intent_id"] })
   end
 
   def test_search_results_include_commits
