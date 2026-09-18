@@ -22,4 +22,10 @@ class RecordValidationTest < Minitest::Test
   def test_unknown_command_exits_one
     assert_cli_rejected run_cli("frobnicate"), matching: /Unknown command/
   end
+
+  # A typo is the usual reason to land here, and the answer a person needs is
+  # the name they meant to type.
+  def test_an_unknown_command_names_the_commands_there_are
+    assert_cli_rejected run_cli("frobnicate"), matching: /by-source/
+  end
 end

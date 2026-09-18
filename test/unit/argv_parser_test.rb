@@ -38,6 +38,16 @@ class ArgvParserTest < Minitest::Test
     assert_raises(IntentRecord::ValidationError) { Parser.take_required_positional([" "], "id") }
   end
 
+  # `search` takes its terms from whatever is left after the options are lifted
+  # out, and the options have to stay in argv so that anything unrecognised is
+  # still there to be rejected.
+  def test_take_positionals_removes_the_terms_and_leaves_the_options_behind
+    argv = %w[retry backoff --bogus]
+
+    assert_equal %w[retry backoff], Parser.take_positionals(argv)
+    assert_equal %w[--bogus], argv
+  end
+
   def test_read_stdin_json_rejects_non_object
     assert_raises(IntentRecord::ValidationError) { Parser.read_stdin_json(StringIO.new("[1]")) }
   end

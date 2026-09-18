@@ -40,6 +40,14 @@ module IntentRecord
         value
       end
 
+      # Everything that is not an option, removed from argv. The options are left
+      # where they were, so reject_leftovers! still judges them.
+      def take_positionals(argv)
+        options, positionals = argv.partition { |token| token.start_with?("--") }
+        argv.replace(options)
+        positionals
+      end
+
       def take_switch?(argv, name)
         !argv.delete(name).nil?
       end

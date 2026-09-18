@@ -15,6 +15,15 @@ module IntentRecord
     # Maps a command name to the command object that handles it and prints its JSON result.
     # Each run_* parses argv fully, then `finish!` rejects anything left over before running.
     class Dispatch
+      HANDLER_PREFIX = "run_".freeze
+
+      # The commands there are, taken from the handlers that implement them, so
+      # the list cannot fall behind what the dispatch actually answers to.
+      def self.commands
+        handlers = private_instance_methods(false).grep(/\A#{HANDLER_PREFIX}/)
+        handlers.map { |name| name.to_s.delete_prefix(HANDLER_PREFIX).tr("_", "-") }.sort
+      end
+
       def initialize(argv, streams:, config:)
         @argv = argv
         @streams = streams
@@ -22,13 +31,17 @@ module IntentRecord
       end
 
       def call(command)
-        handler = "run_#{command.to_s.tr("-", "_")}"
-        raise ValidationError, "Unknown command: #{command}" unless respond_to?(handler, true)
+        handler = "#{HANDLER_PREFIX}#{command.to_s.tr("-", "_")}"
+        raise ValidationError, unknown(command) unless respond_to?(handler, true)
 
         emit(send(handler))
       end
 
       private
+
+      def unknown(command)
+        "Unknown command: #{command}. Known commands: #{self.class.commands.join(", ")}"
+      end
 
       def emit(result)
         @streams.stdout.puts JSON.generate(result)
@@ -65,8 +78,7 @@ module IntentRecord
 
       def run_search
         match = ArgvParser.take_flag(@argv, "--match") || "any"
-        options, terms = @argv.partition { |a| a.start_with?("--") }
-        @argv.replace(options)
+        terms = ArgvParser.take_positionals(@argv)
         finish! { Commands::Search.new(terms: terms, match: match).call }
       end
 
