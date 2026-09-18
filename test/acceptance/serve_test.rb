@@ -11,7 +11,11 @@ class ServeTest < Minitest::Test
     blocker = TCPServer.new("127.0.0.1", 0)
     port = blocker.addr[1]
 
-    result = quietly { Timeout.timeout(30) { run_cli("serve", "--port", port.to_s) } }
+    # A failed bind returns in well under a second. The guard is here so that a
+    # change which makes serve ignore --port, and so really start a server, fails
+    # this test instead of hanging the run; it has to fire well before the
+    # mutation lane's own per-mutant timeout, or that is what gives out first.
+    result = quietly { Timeout.timeout(5) { run_cli("serve", "--port", port.to_s) } }
 
     assert_cli_rejected result, matching: /already in use/
   ensure
