@@ -20,6 +20,7 @@ All notable changes to this project are documented here. The format follows
 
 - A mistyped command lists the commands there are, instead of only naming the one that was not understood.
 - `Config.new` now requires a `config_dir:`, and `Config.default` is the one way to reach the directory this user keeps their records in (`~/.intent-record`, or `INTENT_RECORD_CONFIG_DIR`). The CLI behaves exactly as before; the change matters only to code embedding the library, which can no longer arrive at somebody's own store by losing an argument.
+- Splitting over-long methods added public methods to three library modules: `InputValidator.non_blank_string!` and `InputValidator.within_length!`, `Database.establish!`, `Database.translating_unwritable` and `Database.migrate_and_seed!`, and `Web::Boot.serve!`. No existing method changed its name, arguments or behaviour, and the CLI is unaffected.
 - Leading and trailing whitespace is removed from every string field on input, so an author or a stakeholder title no longer keeps its padding. A summary is measured against the 350 character limit after trimming rather than before.
 
 ## [1.0.0] - 2026-09-18
