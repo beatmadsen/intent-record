@@ -16,7 +16,7 @@ gem install intent-record
 
 On first run a config directory is created at `~/.intent-record/` with the database at `~/.intent-record/intent-record.db`. Edit `~/.intent-record/config.yml` to move the database.
 
-To use a different store for one command, pass `--config-dir <dir>` before or after the command name. `INTENT_RECORD_CONFIG_DIR` does the same for a whole shell, with one difference worth knowing when you are trying to stay out of your own records: a misspelled variable name is silently ignored and the command goes to `~/.intent-record`, while a misspelled flag is refused.
+To use a different store for one command, pass `--config-dir <dir>` before or after the command name. `INTENT_RECORD_CONFIG_DIR` does the same for a whole shell. The two differ where it matters most, when you are trying to stay out of your own records: a misspelled variable name is ignored without a word and the command goes to `~/.intent-record`, while a misspelled flag is refused.
 
 ```bash
 intent-record --config-dir /tmp/scratch recent
@@ -111,6 +111,15 @@ Related-intent links may form cycles; the store records what it is told and leav
 ## Agent integration
 
 Any agent that can run a process and read stdout can use it. Record after each commit, `lookup` before touching unfamiliar code, `by-source` when picking up a ticket that has history.
+
+For Claude Code there is a skill that says when to do each of those and what a usable `body` contains: [intent-record](https://github.com/beatmadsen/claude-skills/tree/main/skills/intent-record), in the [beatmadsen/claude-skills](https://github.com/beatmadsen/claude-skills) collection. Install it for every project you work on:
+
+```bash
+git clone https://github.com/beatmadsen/claude-skills.git ~/claude-skills
+ln -s ~/claude-skills/skills/intent-record ~/.claude/skills/intent-record
+```
+
+Or copy `skills/intent-record` into a single project's `.claude/skills/` and commit it, so everyone working in that repository records the same way.
 
 ## Development
 

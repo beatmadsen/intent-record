@@ -25,7 +25,9 @@ Gem::Specification.new do |spec|
   spec.summary = "Local records storage for the expressed intent behind individual code changes."
   spec.description = "A local, agent-first store that links the written intent behind a code change " \
                      "to its VCS commit and to stakeholder systems such as Jira, Confluence and Linear. " \
-                     "JSON in, JSON out on the CLI, plus a small read-oriented web GUI."
+                     "JSON in, JSON out on the CLI, plus a small read-oriented web GUI. " \
+                     "A Claude Code skill that drives it is at " \
+                     "https://github.com/beatmadsen/claude-skills/tree/main/skills/intent-record."
   spec.homepage = "https://github.com/beatmadsen/intent-record"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2"
