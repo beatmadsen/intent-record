@@ -15,6 +15,7 @@ module IntentRecord
         serve [--port N]                Start the local web GUI
 
       Options:
+        --config-dir <dir>              Use the store in this directory instead of ~/.intent-record
         --help, -h                      Show this help
         --version                       Show version
 

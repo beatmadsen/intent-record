@@ -14,7 +14,13 @@ A commit message says what changed. The intent record says why: what the agent (
 gem install intent-record
 ```
 
-On first run a config directory is created at `~/.intent-record/` with the database at `~/.intent-record/intent-record.db`. Edit `~/.intent-record/config.yml` to move the database, or set `INTENT_RECORD_CONFIG_DIR` to point at a different config directory.
+On first run a config directory is created at `~/.intent-record/` with the database at `~/.intent-record/intent-record.db`. Edit `~/.intent-record/config.yml` to move the database.
+
+To use a different store for one command, pass `--config-dir <dir>` before or after the command name. `INTENT_RECORD_CONFIG_DIR` does the same for a whole shell, with one difference worth knowing when you are trying to stay out of your own records: a misspelled variable name is silently ignored and the command goes to `~/.intent-record`, while a misspelled flag is refused.
+
+```bash
+intent-record --config-dir /tmp/scratch recent
+```
 
 ## Quick start
 
@@ -110,7 +116,7 @@ Any agent that can run a process and read stdout can use it. Record after each c
 
 ```bash
 bin/setup
-bundle exec rake        # tests, then rubocop
+bundle exec rake        # tests, then the same tests with unordered queries reversed, then rubocop
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and release steps, and [CHANGELOG.md](CHANGELOG.md) for what changed in each version.

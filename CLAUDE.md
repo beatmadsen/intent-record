@@ -29,8 +29,10 @@ Ruby gem: a local, agent-first store for the intent behind code changes, linked 
 - The CLI never raises to the user: every `IntentRecord::Error` becomes `{"error": ...}` with exit 1.
 - Linking is all or nothing. A git id is checked for shape while it is being linked, so a later entry can fail after earlier ones are written; `record` and `attach` both wrap the linking in a transaction for that reason.
 - Acceptance tests drive `IntentRecord::CLI` in-process with injected streams and config. Never read `ENV` or the home directory in tests.
+- A test process cannot reach the real store or leave a server running, and does not rely on remembering not to. `test/support/store_confinement.rb` refuses any store path outside `Dir.tmpdir`, at `Config`, `Database` and `SQLite3::Database`. `test/support/port_confinement.rb` refuses a TCP bind unless the test wraps it in `PortConfinement.binding_a_port`, which only `ServeTest` does. Each fails every test if its own guard is missing.
 
 ## Gotchas
 
-- Puma renames its process title, so `pkill -f intent-record` does not find a running server. Use `lsof -tiTCP:<port> -sTCP:LISTEN`.
+- Puma renames its process title, so `pkill -f intent-record` does not find a running server. Use `lsof -tiTCP:<port> -sTCP:LISTEN`. A test that reaches `serve` must stub `Web::App.run!`, or the port confinement refuses the bind.
+- To drive the real executable against a scratch store, pass `--config-dir <dir>`. Prefer it to `INTENT_RECORD_CONFIG_DIR`: an environment variable nobody set is indistinguishable from one that is honoured, so a typo in the name sends the command at `~/.intent-record`, whereas a typo in the flag is refused as unknown argv.
 - `IntentRecord::Models::IntentRecord` shadows the top-level module inside `Models`. Refer to constants from `Models` with a full path.

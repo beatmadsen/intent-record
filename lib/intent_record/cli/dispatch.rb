@@ -40,7 +40,12 @@ module IntentRecord
 
       private
 
+      # An option in the command's place is almost always a misspelled one, and
+      # calling it an unknown command sends the reader looking for a command they
+      # never meant to type.
       def unknown(command)
+        return "Unknown option: #{command}" if command.to_s.start_with?("--")
+
         "Unknown command: #{command}. Known commands: #{self.class.commands.join(", ")}"
       end
 
