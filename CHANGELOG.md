@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `lookup` finds an id from a case-sensitive VCS when no `--vcs` is given. The id was lowercased before the search, so a Perforce changelist stored as `ABC123` resolved with `--vcs perforce` and not at all without it.
+- A database path that cannot be written reports `{"error": ...}` and exit 1. A read-only database file, or a database in a directory that exists but is not writable, let a Ruby exception escape instead.
+- A stakeholder URI with a scheme but no host has its scheme lowercased, so `MAILTO:a@b.com` and `mailto:a@b.com` are one source rather than two. A bare ticket key such as `ACME-42` is still kept exactly as written.
+
+### Changed
+
+- Leading and trailing whitespace is removed from every string field on input, so an author or a stakeholder title no longer keeps its padding. A summary is measured against the 350 character limit after trimming rather than before.
+
 ## [1.0.0] - 2026-09-18
 
 First release.
