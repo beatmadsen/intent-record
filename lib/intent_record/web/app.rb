@@ -16,6 +16,7 @@ module IntentRecord
       set :public_folder, File.expand_path("public", __dir__)
       set :static, true
       set :show_exceptions, false
+      set :dump_errors, false
 
       helpers do
         def h(text)
@@ -35,6 +36,12 @@ module IntentRecord
       error ValidationError do
         status 400
         erb :error, locals: { title: "Cannot answer that", message: env["sinatra.error"].message }
+      end
+
+      error StandardError do
+        status 500
+        warn "#{env["sinatra.error"].class}: #{env["sinatra.error"].message}"
+        erb :error, locals: { title: "Something went wrong", message: env["sinatra.error"].message }
       end
 
       register Routes::Home
