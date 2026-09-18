@@ -113,6 +113,8 @@ bin/setup
 bundle exec rake        # tests, then rubocop
 ```
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and release steps, and [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+
 ## License
 
-MIT
+[MIT](LICENSE.txt)

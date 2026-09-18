@@ -15,6 +15,10 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 3.2"
 
   spec.metadata["homepage_uri"] = spec.homepage
+  spec.metadata["source_code_uri"] = spec.homepage
+  spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
+  spec.metadata["bug_tracker_uri"] = "#{spec.homepage}/issues"
+  spec.metadata["documentation_uri"] = "#{spec.homepage}#readme"
   spec.metadata["rubygems_mfa_required"] = "true"
 
   gemspec = File.basename(__FILE__)
@@ -22,7 +26,7 @@ Gem::Specification.new do |spec|
     ls.readlines("\x0", chomp: true).reject do |f|
       (f == gemspec) ||
         f.start_with?(*%w[bin/ test/ .]) ||
-        f.match?(/\A(Gemfile|Rakefile|CLAUDE\.md)\z/)
+        f.match?(/\A(Gemfile|Rakefile|CLAUDE\.md|CONTRIBUTING\.md)\z/)
     end
   end
   spec.bindir = "exe"
