@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- `Config.new` now requires a `config_dir:`, and `Config.default` is the one way to reach the directory this user keeps their records in (`~/.intent-record`, or `INTENT_RECORD_CONFIG_DIR`). The CLI behaves exactly as before; the change matters only to code embedding the library, which can no longer arrive at somebody's own store by losing an argument.
 - Leading and trailing whitespace is removed from every string field on input, so an author or a stakeholder title no longer keeps its padding. A summary is measured against the 350 character limit after trimming rather than before.
 
 ## [1.0.0] - 2026-09-18

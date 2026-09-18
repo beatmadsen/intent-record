@@ -11,6 +11,17 @@ class ConfigTest < Minitest::Test
     FileUtils.rm_rf(@root)
   end
 
+  # The store a person keeps their own records in is reachable only by asking for
+  # it by name. A caller that loses the argument gets an error, not somebody's
+  # home directory, which is how a test run came to delete one.
+  def test_a_config_must_be_told_which_directory_it_is_for
+    assert_raises(ArgumentError) { IntentRecord::Config.new }
+  end
+
+  def test_a_nil_directory_is_refused_rather_than_filled_in
+    assert_raises(ArgumentError) { IntentRecord::Config.new(config_dir: nil) }
+  end
+
   def test_load_creates_a_config_directory_that_does_not_exist_yet
     dir = File.join(@root, "never", "created")
 

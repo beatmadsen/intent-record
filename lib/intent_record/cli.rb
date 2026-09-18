@@ -7,7 +7,7 @@ module IntentRecord
   # Entry point for the `intent-record` executable. JSON in, JSON out, exit 0 on success.
   class CLI
     def self.run(argv)
-      exit new(argv, config: Config.new, streams: Streams.default).run
+      exit new(argv, config: Config.default, streams: Streams.default).run
     end
 
     def initialize(argv, config:, streams:)

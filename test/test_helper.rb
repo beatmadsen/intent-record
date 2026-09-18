@@ -25,7 +25,7 @@ module TestSandbox
   end
 
   def self.in_effect?
-    IntentRecord::Config.new.config_dir == HOME
+    IntentRecord::Config.default.config_dir == HOME
   end
 
   def self.entries

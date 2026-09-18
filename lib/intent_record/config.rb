@@ -10,8 +10,17 @@ module IntentRecord
 
     attr_reader :config_dir, :db_path
 
-    def initialize(config_dir: nil)
-      @config_dir = config_dir || ENV.fetch("INTENT_RECORD_CONFIG_DIR", DEFAULT_CONFIG_DIR)
+    # The one caller that means "wherever this person keeps their records" says so
+    # by name. Everywhere else has to name a directory, so no caller can arrive at
+    # somebody's own store by losing an argument.
+    def self.default
+      new(config_dir: ENV.fetch("INTENT_RECORD_CONFIG_DIR", DEFAULT_CONFIG_DIR))
+    end
+
+    def initialize(config_dir:)
+      raise ArgumentError, "config_dir is required; use Config.default for this user's own store" if config_dir.nil?
+
+      @config_dir = config_dir
     end
 
     def load!
