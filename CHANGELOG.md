@@ -10,6 +10,7 @@ All notable changes to this project are documented here. The format follows
 
 - `lookup` finds an id from a case-sensitive VCS when no `--vcs` is given. The id was lowercased before the search, so a Perforce changelist stored as `ABC123` resolved with `--vcs perforce` and not at all without it.
 - A database path that cannot be written reports `{"error": ...}` and exit 1. A read-only database file, or a database in a directory that exists but is not writable, let a Ruby exception escape instead.
+- `serve` reports a bad `--port` as `{"error": ...}` instead of letting a Ruby exception escape. A port above 65535 failed with a socket resolution error that never mentioned ports, and a port needing elevated privileges, such as 80, failed with a bare permission error.
 - A stakeholder URI with a scheme but no host has its scheme lowercased, so `MAILTO:a@b.com` and `mailto:a@b.com` are one source rather than two. A bare ticket key such as `ACME-42` is still kept exactly as written.
 
 ### Changed
