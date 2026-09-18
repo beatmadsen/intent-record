@@ -40,6 +40,9 @@ bundle exec rake mutation           # mutineer over lib, fails below the thresho
 bundle exec rake mutation:changed   # only the lines you have not committed yet
 ```
 
+The lane needs Ruby 3.4 or newer, which is what mutineer requires; on 3.2 or 3.3 it
+is not in the bundle at all.
+
 The full lane takes around half a minute against two seconds for `rake`, so it is
 not part of the default gate; run it before pushing. `mutation:changed` is the
 quick version for the edit loop, and a red there is a prompt to look rather than a
