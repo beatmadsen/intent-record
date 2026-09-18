@@ -12,6 +12,19 @@ class RecentTest < Minitest::Test
     assert_equal([ids[1], ids[0]], json["intents"].map { |i| i["intent_id"] })
   end
 
+  def test_recent_accepts_a_limit_of_one
+    record_intent!(summary: "older")
+    newest = record_intent!(summary: "newest")
+
+    json = run_cli_ok!("recent", "--limit", "1")
+
+    assert_equal([newest["intent_id"]], json["intents"].map { |i| i["intent_id"] })
+  end
+
+  def test_recent_rejects_a_limit_below_one
+    assert_cli_rejected run_cli("recent", "--limit", "0"), matching: /at least 1/
+  end
+
   def test_recent_rejects_non_integer_limit
     assert_cli_rejected run_cli("recent", "--limit", "many"), matching: /integer/
   end

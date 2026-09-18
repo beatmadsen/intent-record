@@ -24,6 +24,16 @@ class BySourceTest < Minitest::Test
     assert_equal [], json["intents"]
   end
 
+  # The existing exact-uri test passes the whole uri, which a contains query
+  # matches just as well, so only a partial uri tells the two branches apart.
+  def test_a_partial_uri_matches_nothing_without_contains
+    record_intent!(stakeholder_references: [{ "system" => "jira", "uri" => URI }])
+
+    json = run_cli_ok!("by-source", "ACME-42")
+
+    assert_equal [], json["intents"]
+  end
+
   def test_substring_match_finds_ticket_key_across_systems
     a = record_intent!(stakeholder_references: [{ "system" => "jira", "uri" => URI }])
     b = record_intent!(stakeholder_references: [{ "system" => "confluence",

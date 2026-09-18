@@ -65,4 +65,8 @@ class SearchStakeholderFieldsTest < Minitest::Test
 
     assert_equal 1, run_cli_ok!("search", "acme")["intents"].size
   end
+
+  def test_search_rejects_an_unknown_match_mode
+    assert_cli_rejected run_cli("search", "retry", "--match", "sideways"), matching: /any or all/
+  end
 end
