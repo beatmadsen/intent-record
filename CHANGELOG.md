@@ -8,6 +8,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Two commands running at once no longer fail with "database is locked". ActiveRecord installs no busy handler unless it is given a `:timeout`, so a write that met a concurrent one gave up instead of waiting, and the failure escaped as a Ruby exception rather than `{"error": ...}`. Measured on four concurrent writers: 4 of 32 failed before, none after. Setting up a new store is also serialised on a lock file, because two processes reaching one together each found the tables missing and each created them.
 - `lookup` finds an id from a case-sensitive VCS when no `--vcs` is given. The id was lowercased before the search, so a Perforce changelist stored as `ABC123` resolved with `--vcs perforce` and not at all without it.
 - A database path that cannot be written reports `{"error": ...}` and exit 1. A read-only database file, or a database in a directory that exists but is not writable, let a Ruby exception escape instead.
 - `serve` reports a bad `--port` as `{"error": ...}` instead of letting a Ruby exception escape. A port above 65535 failed with a socket resolution error that never mentioned ports, and a port needing elevated privileges, such as 80, failed with a bare permission error.

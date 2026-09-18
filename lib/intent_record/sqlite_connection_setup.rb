@@ -5,7 +5,9 @@ module IntentRecord
   # Applied to every pooled SQLite connection: pragmas, and a Unicode-aware ULOWER() so
   # case-insensitive search works for non-ASCII letters (SQLite's LOWER folds ASCII only).
   module SqliteConnectionSetup
-    PRAGMAS = ["PRAGMA foreign_keys = ON", "PRAGMA journal_mode = WAL", "PRAGMA busy_timeout = 5000"].freeze
+    BUSY_TIMEOUT_MS = 5_000
+    PRAGMAS = ["PRAGMA foreign_keys = ON", "PRAGMA journal_mode = WAL",
+               "PRAGMA busy_timeout = #{BUSY_TIMEOUT_MS}"].freeze
 
     def configure_connection
       super

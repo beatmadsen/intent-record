@@ -16,9 +16,15 @@ module IntentRecord
     def self.connect!(db_path)
       FileUtils.mkdir_p(File.dirname(db_path))
       ActiveRecord::Base.logger = nil
-      ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: db_path)
-      run_migrations!
-      Seeds.apply!
+      # The pragma sets sqlite's own busy timeout, which is not the same thing as
+      # the adapter's: without :timeout ActiveRecord installs no busy handler and
+      # a write that meets a concurrent one fails rather than waiting.
+      ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: db_path,
+                                              timeout: SqliteConnectionSetup::BUSY_TIMEOUT_MS)
+      while_setting_up(db_path) do
+        run_migrations!
+        Seeds.apply!
+      end
     rescue Errno::EACCES, Errno::EPERM, Errno::EROFS => e
       raise DatabaseError, unwritable(db_path, e)
     rescue ActiveRecord::StatementInvalid => e
@@ -35,6 +41,17 @@ module IntentRecord
       ActiveRecord::Base.remove_connection
     rescue StandardError
       nil
+    end
+
+    # Migrating and seeding both read and then write, so two processes reaching a
+    # new store together each find the tables missing and each create them. Their
+    # individual statements succeed, so sqlite's locking has nothing to object to
+    # until one of them hits "table already exists". Serialise the whole setup.
+    def self.while_setting_up(db_path)
+      File.open("#{db_path}.setup", File::RDWR | File::CREAT) do |lock|
+        lock.flock(File::LOCK_EX)
+        yield
+      end
     end
 
     def self.run_migrations!

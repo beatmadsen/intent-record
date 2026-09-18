@@ -13,11 +13,18 @@ class SystemsTest < Minitest::Test
     end
   end
 
-  def test_seeding_is_idempotent_across_connects
-    IntentRecord::Database.connect!(config.db_path)
-    IntentRecord::Database.connect!(config.db_path)
+  def test_reconnecting_does_not_duplicate_the_seeded_vcs_systems
+    2.times { IntentRecord::Database.connect!(config.db_path) }
 
     assert_equal IntentRecord::Seeds::VCS_SYSTEMS.size, IntentRecord::Models::VcsSystem.count
+  end
+
+  # The other half of the same rule, and the one that was unpinned: seed! is
+  # called once per table, so either call could double up on its own.
+  def test_reconnecting_does_not_duplicate_the_seeded_stakeholder_systems
+    2.times { IntentRecord::Database.connect!(config.db_path) }
+
+    assert_equal IntentRecord::Seeds::STAKEHOLDER_SYSTEMS.size, IntentRecord::Models::StakeholderSystem.count
   end
 
   def test_user_added_systems_appear_alongside_seeded_ones
