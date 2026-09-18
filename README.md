@@ -50,7 +50,7 @@ JSON in on stdin where input is needed, JSON out on stdout, exit code 0 on succe
 | `record` | Record the intent behind a change (JSON via stdin) |
 | `attach <intent_id>` | Link more commits, stakeholder references or related intents to an existing record (JSON via stdin) |
 | `show <intent_id>` | Full intent record with commits, stakeholder links and related intents |
-| `lookup <commit> [--vcs name]` | All intents recorded against a commit. Accepts a full hash or a unique prefix of at least 4 characters |
+| `lookup <commit> [--vcs name]` | All intents recorded against a commit. Accepts a full hash or a unique prefix of at least 4 characters. Ids are unique per system, not across them, so an id recorded in two systems is reported as ambiguous; name one with `--vcs` |
 | `search <terms...> [--match all]` | Case-insensitive substring search over summary, body, and linked stakeholder URIs and titles, so a ticket key finds its intents |
 | `by-source <uri> [--contains]` | Intents linked to a stakeholder source, plus the distinct commits across them. `--contains` matches a substring such as a ticket key |
 | `recent [--limit N]` | Newest intents first |
