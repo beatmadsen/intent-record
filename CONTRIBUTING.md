@@ -14,8 +14,20 @@ Tests run in parallel with one temporary database per test, so nothing touches `
 ## Mutation testing
 
 ```bash
-bundle exec rake mutation   # mutineer over lib, fails below the threshold in .mutineer.yml
+bundle exec rake mutation           # mutineer over lib, fails below the threshold in .mutineer.yml
+bundle exec rake mutation:changed   # only the lines you have not committed yet
 ```
+
+The full lane takes around half a minute against two seconds for `rake`, so it is
+not part of the default gate; run it before pushing. `mutation:changed` is the
+quick version for the edit loop, and a red there is a prompt to look rather than a
+verdict, because a handful of mutants is a small enough sample that one equivalent
+mutant sinks the score.
+
+`lib/intent_record/web/routes` sits outside the lane. Sinatra captures a route's
+body when the module is registered, which happens before mutineer forks, so every
+mutant there is reported as surviving when no test could kill it; making the same
+edits by hand does turn the web acceptance tests red.
 
 Each surviving mutant is a change to `lib` that no test objected to. Either add the
 test that objects, or, when the mutant is equivalent to the original code, say so in

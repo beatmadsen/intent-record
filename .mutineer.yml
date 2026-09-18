@@ -2,4 +2,4 @@
 # then fork per mutant. `redefine` is passed by the rake task.
 boot: test/mutation_boot.rb
 framework: minitest
-threshold: 80
+threshold: 90
