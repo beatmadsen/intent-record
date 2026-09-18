@@ -30,19 +30,22 @@ class UnorderedRowsPredicateTest < Minitest::Test
   end
 end
 
-class UnorderedRowsLaneTest < Minitest::Test
-  include DbTestSetup
+# Defined only when the lane is on: with it off there is no reversal to specify,
+# and a test that skips in every run of the gate is a line of noise that teaches
+# people to read past the skip count.
+if UnorderedRows.enabled?
+  class UnorderedRowsLaneTest < Minitest::Test
+    include DbTestSetup
 
-  # `SELECT *` has to read every column, so SQLite cannot answer it from a
-  # covering index and walks the table in rowid order. That is the one shape
-  # whose natural answer is predictable enough to compare a reversal against.
-  # `pluck(:id)` would not do: SQLite answers it from the index on name, in name
-  # order, which is the very assumption this lane exists to break.
-  def test_the_lane_reverses_the_rows_a_query_without_an_order_by_returns
-    skip "the chaos lane is off; `rake test:chaos` turns it on" unless UnorderedRows.enabled?
+    # `SELECT *` has to read every column, so SQLite cannot answer it from a
+    # covering index and walks the table in rowid order. That is the one shape
+    # whose natural answer is predictable enough to compare a reversal against.
+    # `pluck(:id)` would not do: SQLite answers it from the index on name, in name
+    # order, which is the very assumption this lane exists to break.
+    def test_the_lane_reverses_the_rows_a_query_without_an_order_by_returns
+      rowid_order = IntentRecord::Models::VcsSystem.order(:id).pluck(:id)
 
-    rowid_order = IntentRecord::Models::VcsSystem.order(:id).pluck(:id)
-
-    assert_equal rowid_order.reverse, IntentRecord::Models::VcsSystem.all.map(&:id)
+      assert_equal rowid_order.reverse, IntentRecord::Models::VcsSystem.all.map(&:id)
+    end
   end
 end
