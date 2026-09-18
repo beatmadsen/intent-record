@@ -7,7 +7,7 @@
     <h2>Commits</h2>
     <ul class="commit-list">
       <% versions.each do |v| %>
-        <li><span class="chip"><%= h v["vcs"] %></span> <a class="commit-list-item" href="/commits/<%= h v["external_id"] %>?vcs=<%= h v["vcs"] %>"><%= h v["external_id"] %></a></li>
+        <li><span class="chip"><%= h v["vcs"] %></span> <a href="/commits/<%= h v["external_id"] %>?vcs=<%= h v["vcs"] %>" class="commit-list-item"><%= h v["external_id"] %></a></li>
       <% end %>
     </ul>
   </section>
