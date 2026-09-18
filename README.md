@@ -1,5 +1,7 @@
 # intent-record
 
+[![CI](https://github.com/beatmadsen/intent-record/actions/workflows/ci.yml/badge.svg)](https://github.com/beatmadsen/intent-record/actions/workflows/ci.yml)
+
 Local records storage for the intent behind individual code changes.
 
 A commit message says what changed. The intent record says why: what the agent (or person) was trying to achieve, which ticket or design page asked for it, and which earlier change it builds on. intent-record stores that in a local SQLite database, links it to the commit hash, and answers the questions people and agents ask later.

@@ -2,6 +2,9 @@
 
 Issues and pull requests are welcome at https://github.com/beatmadsen/intent-record.
 
+Every push and pull request runs `bundle exec rake` on Ruby 3.2, 3.3, 3.4 and 4.0, which is
+the oldest version the gem claims to support through the newest one released.
+
 ## Setup
 
 ```bash
