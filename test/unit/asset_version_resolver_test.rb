@@ -43,6 +43,16 @@ class AssetVersionResolverTest < Minitest::Test
 
   # Without --vcs the id could belong to either family. Downcasing it on the way in
   # put a case-sensitive id out of reach of every lookup that omitted the flag.
+  # A hash-based system stores its ids downcased, so the spelling the caller
+  # typed can miss while the downcased one hits. Below the prefix minimum there
+  # is no second chance from the prefix query, so the exact lookup has to go on
+  # to the next spelling rather than stopping at the first miss.
+  def test_an_uppercase_id_too_short_for_a_prefix_resolves_by_its_stored_spelling
+    seed("ab")
+
+    assert_equal "ab", resolve("AB").external_id
+  end
+
   def test_a_case_sensitive_id_resolves_without_a_vcs_filter
     seed("ABC123", vcs: "perforce")
 
