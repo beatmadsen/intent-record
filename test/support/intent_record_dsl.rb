@@ -41,13 +41,15 @@ module IntentRecordDsl
 
   def assert_no_internal_ids(node, path = "response")
     case node
-    when Hash
-      node.each do |key, value|
-        refute internal_id_key?(key), "#{path} exposes a database id as #{key.inspect}"
-        assert_no_internal_ids(value, "#{path}.#{key}")
-      end
-    when Array
-      node.each_with_index { |value, i| assert_no_internal_ids(value, "#{path}[#{i}]") }
+    when Hash then assert_no_internal_ids_in_hash(node, path)
+    when Array then node.each_with_index { |value, i| assert_no_internal_ids(value, "#{path}[#{i}]") }
+    end
+  end
+
+  def assert_no_internal_ids_in_hash(node, path)
+    node.each do |key, value|
+      refute internal_id_key?(key), "#{path} exposes a database id as #{key.inspect}"
+      assert_no_internal_ids(value, "#{path}.#{key}")
     end
   end
 

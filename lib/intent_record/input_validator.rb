@@ -4,16 +4,23 @@ module IntentRecord
     module_function
 
     def required_string!(input, key, max_length: nil)
+      value = non_blank_string!(input, key)
+      max_length ? within_length!(value, key, max_length) : value
+    end
+
+    def non_blank_string!(input, key)
       value = input[key]
       raise ValidationError, "#{key} is required" if value.nil?
       raise ValidationError, "#{key} must be a string" unless value.is_a?(String)
 
       value = value.strip
       raise ValidationError, "#{key} cannot be blank" if value.empty?
-      if max_length && value.length > max_length
-        raise ValidationError,
-              "#{key} must be #{max_length} characters or fewer"
-      end
+
+      value
+    end
+
+    def within_length!(value, key, max_length)
+      raise ValidationError, "#{key} must be #{max_length} characters or fewer" if value.length > max_length
 
       value
     end

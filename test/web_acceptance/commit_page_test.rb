@@ -2,10 +2,10 @@ require "test_helper"
 require "intent_record/web/app"
 
 class CommitPageTest < WebAcceptanceCase
-  def test_commit_page_lists_intents_with_body_and_stakeholder_links
-    jira = { "system" => "jira", "uri" => "https://j/ACME-1", "title" => "Flaky fetch" }
-    record_intent!(summary: "Retry fetch", body: "Network was flaky.", author: "claude", commits: [HASH],
-                   stakeholder_references: [jira])
+  JIRA = { "system" => "jira", "uri" => "https://j/ACME-1", "title" => "Flaky fetch" }.freeze
+
+  def test_commit_page_shows_the_summary_body_and_author_of_each_intent
+    record_intent!(summary: "Retry fetch", body: "Network was flaky.", author: "claude", commits: [HASH])
 
     get "/commits/#{HASH}"
 
@@ -13,8 +13,15 @@ class CommitPageTest < WebAcceptanceCase
     assert_body_includes "Retry fetch"
     assert_body_includes "Network was flaky."
     assert_body_includes "claude"
-    assert_body_includes 'href="https://j/ACME-1"'
-    assert_body_includes "Flaky fetch"
+  end
+
+  def test_commit_page_links_each_stakeholder_source_under_its_title
+    record_intent!(commits: [HASH], stakeholder_references: [JIRA])
+
+    get "/commits/#{HASH}"
+
+    assert_body_includes %(href="#{JIRA["uri"]}")
+    assert_body_includes JIRA["title"]
   end
 
   def test_commit_page_resolves_short_prefix_and_shows_full_hash

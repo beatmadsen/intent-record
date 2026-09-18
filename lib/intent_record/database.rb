@@ -14,23 +14,35 @@ module IntentRecord
     UNWRITABLE_CAUSES = [SQLite3::CantOpenException, SQLite3::ReadOnlyException].freeze
 
     def self.connect!(db_path)
-      FileUtils.mkdir_p(File.dirname(db_path))
-      ActiveRecord::Base.logger = nil
-      # The pragma sets sqlite's own busy timeout, which is not the same thing as
-      # the adapter's: without :timeout ActiveRecord installs no busy handler and
-      # a write that meets a concurrent one fails rather than waiting.
-      ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: db_path,
-                                              timeout: SqliteConnectionSetup::BUSY_TIMEOUT_MS)
-      while_setting_up(db_path) do
-        run_migrations!
-        Seeds.apply!
+      translating_unwritable(db_path) do
+        FileUtils.mkdir_p(File.dirname(db_path))
+        establish!(db_path)
+        while_setting_up(db_path) { migrate_and_seed! }
       end
+    end
+
+    def self.translating_unwritable(db_path)
+      yield
     rescue Errno::EACCES, Errno::EPERM, Errno::EROFS => e
       raise DatabaseError, unwritable(db_path, e)
     rescue ActiveRecord::StatementInvalid => e
       raise unless UNWRITABLE_CAUSES.any? { |klass| e.cause.is_a?(klass) }
 
       raise DatabaseError, unwritable(db_path, e.cause)
+    end
+
+    def self.establish!(db_path)
+      ActiveRecord::Base.logger = nil
+      # The pragma sets sqlite's own busy timeout, which is not the same thing as
+      # the adapter's: without :timeout ActiveRecord installs no busy handler and
+      # a write that meets a concurrent one fails rather than waiting.
+      ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: db_path,
+                                              timeout: SqliteConnectionSetup::BUSY_TIMEOUT_MS)
+    end
+
+    def self.migrate_and_seed!
+      run_migrations!
+      Seeds.apply!
     end
 
     def self.unwritable(db_path, error)

@@ -34,14 +34,18 @@ module IntentRecord
       end
 
       def find_or_create_source(ref)
-        system = find_or_create_system(StakeholderNormalizer.system_name(ref["system"]))
-        source = Models::StakeholderSource.find_or_initialize_by(stakeholder_system: system,
-                                                                 uri: StakeholderNormalizer.uri(ref["uri"]))
+        source = initialized_source(ref)
         title = InputValidator.optional_string!(ref, "title")
         source.title = title if title
         source.created_at ||= Time.now.utc
         source.save!
         source
+      end
+
+      def initialized_source(ref)
+        system = find_or_create_system(StakeholderNormalizer.system_name(ref["system"]))
+        Models::StakeholderSource.find_or_initialize_by(stakeholder_system: system,
+                                                        uri: StakeholderNormalizer.uri(ref["uri"]))
       end
 
       def find_or_create_system(name)

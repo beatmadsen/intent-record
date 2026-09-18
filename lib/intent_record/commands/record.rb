@@ -11,12 +11,10 @@ module IntentRecord
     # Creates an intent record and links it to commits, stakeholder sources and related intents.
     class Record
       def call(input)
-        summary = InputValidator.required_string!(input, "summary", max_length: Models::IntentRecord::SUMMARY_MAX_LENGTH)
-        body = InputValidator.required_string!(input, "body")
-        author = InputValidator.optional_string!(input, "author")
+        attributes = validated(input)
 
         ActiveRecord::Base.transaction do
-          record = create_record(summary.gsub(/\s+/, " "), body, author)
+          record = Models::IntentRecord.create!(attributes)
           link_all(record, input)
           Formatter.full(record)
         end
@@ -24,12 +22,17 @@ module IntentRecord
 
       private
 
-      def create_record(summary, body, author)
-        Models::IntentRecord.create!(
-          global_id: GlobalId.unique_for(Models::IntentRecord),
-          summary: summary, body: body, author: author,
-          created_at: Time.now.utc
-        )
+      def validated(input)
+        { global_id: GlobalId.unique_for(Models::IntentRecord),
+          summary: summary(input),
+          body: InputValidator.required_string!(input, "body"),
+          author: InputValidator.optional_string!(input, "author"),
+          created_at: Time.now.utc }
+      end
+
+      def summary(input)
+        InputValidator.required_string!(input, "summary", max_length: Models::IntentRecord::SUMMARY_MAX_LENGTH)
+                      .gsub(/\s+/, " ")
       end
 
       def link_all(record, input)

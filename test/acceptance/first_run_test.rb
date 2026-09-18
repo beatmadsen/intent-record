@@ -92,14 +92,16 @@ class FirstRunTest < Minitest::Test
   def first_run(db_path)
     File.write(File.join(@config_dir, "config.yml"), YAML.dump("db_path" => db_path))
     stdout = StringIO.new
+    process_stdout, = capture_io { record_onto(stdout) }
+    Run.new(stdout: stdout.string, process_stdout: process_stdout)
+  end
+
+  def record_onto(stdout)
     streams = IntentRecord::CLI::Streams.new(
       stdin: StringIO.new(JSON.generate("summary" => "First run", "body" => "Because reasons.")),
       stdout: stdout, stderr: StringIO.new
     )
-    process_stdout, = capture_io do
-      IntentRecord::CLI.new(["record"], config: IntentRecord::Config.new(config_dir: @config_dir),
-                                        streams: streams).run
-    end
-    Run.new(stdout: stdout.string, process_stdout: process_stdout)
+    IntentRecord::CLI.new(["record"], config: IntentRecord::Config.new(config_dir: @config_dir),
+                                      streams: streams).run
   end
 end

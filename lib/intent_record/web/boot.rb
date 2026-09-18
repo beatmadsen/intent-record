@@ -27,15 +27,21 @@ module IntentRecord
       end
 
       def run!(config:, argv:, streams: CLI::Streams.default)
-        opts = parse_argv(argv)
+        port = parse_argv(argv).port
         config.load!
         Database.connect!(config.db_path)
-        streams.stderr.puts "intent-record GUI on http://#{BIND}:#{opts.port} (db: #{config.db_path})"
-        App.run!(bind: BIND, port: opts.port)
+        streams.stderr.puts "intent-record GUI on http://#{BIND}:#{port} (db: #{config.db_path})"
+        serve!(port)
+      end
+
+      # Only the bind itself can refuse a port, and Database.connect! has already
+      # translated its own permission failures, so these two reach here from App only.
+      def serve!(port)
+        App.run!(bind: BIND, port: port)
       rescue Errno::EADDRINUSE
-        raise Error, "Port #{opts.port} is already in use; pass --port to choose another"
+        raise Error, "Port #{port} is already in use; pass --port to choose another"
       rescue Errno::EACCES
-        raise Error, "Port #{opts.port} needs elevated privileges; pass --port to choose another"
+        raise Error, "Port #{port} needs elevated privileges; pass --port to choose another"
       end
     end
   end

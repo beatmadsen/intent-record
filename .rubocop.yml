@@ -19,10 +19,25 @@ Style/StringLiteralsInInterpolation:
 Style/FrozenStringLiteralComment:
   Enabled: false
 
+# The limits below are the project's coding standards, so the gate counts them
+# rather than leaving them to be remembered: methods of 7 lines, at most 2 levels
+# of block nesting, at most 4 parameters. Migrations are generated shape, not code
+# written to these standards.
 Metrics/MethodLength:
-  Max: 30
+  Max: 7
+  CountComments: false
   Exclude:
     - "db/migrate/**/*"
+
+# CountBlocks defaults to false, which would let any depth of each/map nesting
+# through and leave the cop checking something narrower than the standard.
+Metrics/BlockNesting:
+  Max: 2
+  CountBlocks: true
+
+Metrics/ParameterLists:
+  Max: 4
+  MaxOptionalParameters: 4
 
 Metrics/BlockLength:
   Exclude:

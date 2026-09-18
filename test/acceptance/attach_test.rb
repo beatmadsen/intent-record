@@ -4,6 +4,7 @@ class AttachTest < Minitest::Test
   include IntentRecordDsl
 
   HASH = "abc1234abc1234abc1234abc1234abc1234abc12".freeze
+  LINEAR = { "system" => "linear", "uri" => "https://l/ENG-9" }.freeze
 
   def test_attach_adds_commit_after_the_fact
     id = record_intent!["intent_id"]
@@ -13,17 +14,29 @@ class AttachTest < Minitest::Test
     assert_equal([HASH], run_cli_ok!("show", id)["asset_versions"].map { |v| v["external_id"] })
   end
 
-  def test_attach_adds_stakeholder_reference_and_related_intent
+  def test_attach_adds_a_stakeholder_reference_after_the_fact
+    id = record_intent!["intent_id"]
+
+    run_cli_ok!("attach", id, stdin: { "stakeholder_references" => [LINEAR] })
+
+    assert_equal LINEAR["uri"], run_cli_ok!("show", id)["stakeholder_references"].sole["uri"]
+  end
+
+  def test_attach_relates_an_earlier_intent_to_this_one
     earlier = record_intent!["intent_id"]
     id = record_intent!["intent_id"]
 
-    payload = { "stakeholder_references" => [{ "system" => "linear", "uri" => "https://l/ENG-9" }],
-                "related_intent_ids" => [earlier] }
-    run_cli_ok!("attach", id, stdin: payload)
+    run_cli_ok!("attach", id, stdin: { "related_intent_ids" => [earlier] })
 
-    shown = run_cli_ok!("show", id)
-    assert_equal "https://l/ENG-9", shown["stakeholder_references"].sole["uri"]
-    assert_equal([earlier], shown["related_intents"].map { |r| r["intent_id"] })
+    assert_equal([earlier], run_cli_ok!("show", id)["related_intents"].map { |r| r["intent_id"] })
+  end
+
+  def test_the_earlier_intent_sees_the_relation_from_its_own_side
+    earlier = record_intent!["intent_id"]
+    id = record_intent!["intent_id"]
+
+    run_cli_ok!("attach", id, stdin: { "related_intent_ids" => [earlier] })
+
     assert_equal([id], run_cli_ok!("show", earlier)["related_by_intents"].map { |r| r["intent_id"] })
   end
 

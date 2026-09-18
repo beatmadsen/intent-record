@@ -1,5 +1,21 @@
 require_relative "lib/intent_record/version"
 
+NOT_PACKAGED = /\A(Gemfile|Rakefile|CLAUDE\.md|CONTRIBUTING\.md)\z/
+NOT_PACKAGED_PREFIXES = %w[bin/ test/ .].freeze
+
+packaged = lambda do |path|
+  next false if path == File.basename(__FILE__)
+  next false if path.start_with?(*NOT_PACKAGED_PREFIXES)
+
+  !path.match?(NOT_PACKAGED)
+end
+
+packaged_files = lambda do
+  IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
+    ls.readlines("\x0", chomp: true).select(&packaged)
+  end
+end
+
 Gem::Specification.new do |spec|
   spec.name = "intent-record"
   spec.version = IntentRecord::VERSION
@@ -20,14 +36,7 @@ Gem::Specification.new do |spec|
   spec.metadata["documentation_uri"] = "#{spec.homepage}#readme"
   spec.metadata["rubygems_mfa_required"] = "true"
 
-  gemspec = File.basename(__FILE__)
-  spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
-    ls.readlines("\x0", chomp: true).reject do |f|
-      (f == gemspec) ||
-        f.start_with?(*%w[bin/ test/ .]) ||
-        f.match?(/\A(Gemfile|Rakefile|CLAUDE\.md|CONTRIBUTING\.md)\z/)
-    end
-  end
+  spec.files = packaged_files.call
   spec.bindir = "exe"
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
