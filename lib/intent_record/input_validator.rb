@@ -8,23 +8,6 @@ module IntentRecord
       max_length ? within_length!(value, key, max_length) : value
     end
 
-    def non_blank_string!(input, key)
-      value = input[key]
-      raise ValidationError, "#{key} is required" if value.nil?
-      raise ValidationError, "#{key} must be a string" unless value.is_a?(String)
-
-      value = value.strip
-      raise ValidationError, "#{key} cannot be blank" if value.empty?
-
-      value
-    end
-
-    def within_length!(value, key, max_length)
-      raise ValidationError, "#{key} must be #{max_length} characters or fewer" if value.length > max_length
-
-      value
-    end
-
     def optional_string!(input, key)
       value = input[key]
       return nil if value.nil?
@@ -57,5 +40,25 @@ module IntentRecord
       end
       values
     end
+
+    def non_blank_string!(input, key)
+      value = input[key]
+      raise ValidationError, "#{key} is required" if value.nil?
+      raise ValidationError, "#{key} must be a string" unless value.is_a?(String)
+
+      value = value.strip
+      raise ValidationError, "#{key} cannot be blank" if value.empty?
+
+      value
+    end
+
+    def within_length!(value, key, max_length)
+      raise ValidationError, "#{key} must be #{max_length} characters or fewer" if value.length > max_length
+
+      value
+    end
+
+    # Steps of required_string!, not part of what this module offers callers.
+    private_class_method :non_blank_string!, :within_length!
   end
 end

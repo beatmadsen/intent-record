@@ -14,7 +14,7 @@ module IntentRecord
         attributes = validated(input)
 
         ActiveRecord::Base.transaction do
-          record = Models::IntentRecord.create!(attributes)
+          record = create!(attributes)
           link_all(record, input)
           Formatter.full(record)
         end
@@ -22,12 +22,19 @@ module IntentRecord
 
       private
 
+      # Nothing here reaches the database, so bad input is refused before the
+      # store is asked anything, and these rules can be exercised without one.
       def validated(input)
-        { global_id: GlobalId.unique_for(Models::IntentRecord),
-          summary: summary(input),
+        { summary: summary(input),
           body: InputValidator.required_string!(input, "body"),
           author: InputValidator.optional_string!(input, "author"),
           created_at: Time.now.utc }
+      end
+
+      # Minting the id asks the store whether it is taken, which is why it waits
+      # until the input has been accepted.
+      def create!(attributes)
+        Models::IntentRecord.create!(attributes.merge(global_id: GlobalId.unique_for(Models::IntentRecord)))
       end
 
       def summary(input)

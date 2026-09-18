@@ -50,6 +50,13 @@ class AttachTest < Minitest::Test
     assert_cli_rejected run_cli("attach", "zzzzzzz", stdin: { "commits" => [HASH] }), matching: /not found/i
   end
 
+  # Both faults at once: an id that names nothing, and nothing to attach to it.
+  # The id is the one the caller can act on, so it is the one reported, and the
+  # lookup that decides this comes first in Attach#call for that reason.
+  def test_an_unknown_intent_is_reported_ahead_of_an_empty_payload
+    assert_cli_rejected run_cli("attach", "zzzzzzz", stdin: {}), matching: /not found/i
+  end
+
   def test_attach_relating_an_intent_to_itself_is_rejected
     id = record_intent!["intent_id"]
 
