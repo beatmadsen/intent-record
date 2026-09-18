@@ -1,5 +1,12 @@
 <header>
   <h1><%= h version["vcs"] %> <code><%= h version["external_id"] %></code></h1>
-  <p class="subtitle"><%= intents.size %> intent record<%= intents.size == 1 ? "" : "s" %> for this asset version</p>
+  <% if intents.size > 1 %>
+    <p class="subtitle"><%= intents.size %> intent records for this asset version, recorded in this order. Later records usually refine earlier ones.</p>
+  <% else %>
+    <p class="subtitle"><%= intents.size %> intent record for this asset version</p>
+  <% end %>
 </header>
-<%= intent_cards(intents) %>
+<% intents.each_with_index do |intent, i| %>
+  <% if intents.size > 1 %><h3><%= i + 1 %> of <%= intents.size %></h3><% end %>
+  <%= intent_cards([intent]) %>
+<% end %>

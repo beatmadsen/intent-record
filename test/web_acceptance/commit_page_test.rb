@@ -26,6 +26,16 @@ class CommitPageTest < WebAcceptanceCase
     assert_body_includes HASH
   end
 
+  def test_several_intents_on_one_commit_are_numbered_in_recording_order
+    record_intent!(summary: "First take", commits: [HASH])
+    record_intent!(summary: "Second take", commits: [HASH])
+
+    get "/commits/#{HASH}"
+
+    assert_body_includes "recorded in this order"
+    assert_match(/1 of 2.*First take.*2 of 2.*Second take/m, last_response.body)
+  end
+
   def test_unknown_commit_is_a_404_with_explanation
     get "/commits/deadbeef"
 

@@ -73,7 +73,7 @@ JSON in on stdin where input is needed, JSON out on stdout, exit code 0 on succe
 
 Options take either `--name value` or `--name=value`. Unknown options and stray arguments are rejected rather than ignored.
 
-Git commits must be full SHA-1 or SHA-256 hashes; they are stored lowercase. Prefix lookup applies to hash-based systems only (git, mercurial, fossil, sapling, pijul, darcs), so a Perforce changelist `1234` never matches `12345`. URIs are normalised (lowercase scheme and host, no trailing slash) and system names are lowercased and hyphenated, so `Jira` and `jira`, or a ticket URL with and without a trailing slash, are one source. A later non-blank `title` for a source replaces the stored one.
+`lookup` without `--vcs` searches every system and prefers an exact id match over a prefix match. Git commits must be full SHA-1 or SHA-256 hashes; they are stored lowercase. Prefix lookup applies to hash-based systems only (git, mercurial, fossil, sapling, pijul, darcs), so a Perforce changelist `1234` never matches `12345`. URIs are normalised (lowercase scheme and host, no trailing slash) and system names are lowercased and hyphenated, so `Jira` and `jira`, or a ticket URL with and without a trailing slash, are one source. A later non-blank `title` for a source replaces the stored one.
 
 `record` and `attach` both return the full intent record.
 
@@ -95,6 +95,8 @@ intent_record_links    (source, target)                  intent builds on intent
 ```
 
 Intent ids are random 7-character base58 strings. Database ids never appear in output.
+
+Related-intent links may form cycles; the store records what it is told and leaves the meaning to the reader. Bodies have no size cap.
 
 ## Web GUI
 
