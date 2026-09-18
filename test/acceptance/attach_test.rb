@@ -37,6 +37,20 @@ class AttachTest < Minitest::Test
     assert_cli_rejected run_cli("attach", "zzzzzzz", stdin: { "commits" => [HASH] }), matching: /not found/i
   end
 
+  def test_attach_relating_an_intent_to_itself_is_rejected
+    id = record_intent!["intent_id"]
+
+    assert_cli_rejected run_cli("attach", id, stdin: { "related_intent_ids" => [id] }),
+                        matching: /cannot link to itself/i
+  end
+
+  def test_attach_relating_an_unknown_intent_is_not_found
+    id = record_intent!["intent_id"]
+
+    assert_cli_rejected run_cli("attach", id, stdin: { "related_intent_ids" => ["zzzzzzz"] }),
+                        matching: /related intent record not found/i
+  end
+
   def test_attach_same_commit_twice_is_idempotent
     id = record_intent!(commits: [HASH])["intent_id"]
 
