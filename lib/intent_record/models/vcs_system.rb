@@ -1,3 +1,4 @@
+require_relative "../application_record"
 module IntentRecord
   module Models
     class VcsSystem < ApplicationRecord

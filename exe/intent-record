@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require "intent_record"
+
+IntentRecord::CLI.run(ARGV)

@@ -35,7 +35,7 @@ module IntentRecord
     end
 
     def usage
-      @streams.stderr.puts Dispatch::USAGE
+      @streams.stderr.puts USAGE
       0
     end
 

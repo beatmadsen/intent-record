@@ -1,5 +1,6 @@
 require "active_record"
 require "fileutils"
+require_relative "seeds"
 
 module IntentRecord
   module Database
@@ -11,6 +12,7 @@ module IntentRecord
       ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: db_path)
       apply_pragmas!
       run_migrations!
+      Seeds.apply!
     rescue Errno::EACCES, Errno::EPERM, Errno::EROFS => e
       raise DatabaseError, "Database path is not writable: #{db_path} (#{e.message})"
     end

@@ -1,0 +1,34 @@
+require "test_helper"
+
+class BySourceTest < Minitest::Test
+  include IntentRecordDsl
+
+  URI = "https://acme.atlassian.net/browse/ACME-42".freeze
+
+  def test_lists_intents_and_their_commits_for_a_stakeholder_uri
+    a = record_intent!(commits: ["1111111111111111111111111111111111111111"],
+                       stakeholder_references: [{ "system" => "jira", "uri" => URI }])
+    record_intent!(stakeholder_references: [{ "system" => "jira", "uri" => "https://acme.atlassian.net/browse/ACME-43" }])
+
+    json = run_cli_ok!("by-source", URI)
+
+    assert_equal [a["intent_id"]], json["intents"].map { |i| i["intent_id"] }
+    assert_equal "1111111111111111111111111111111111111111", json["intents"].sole["asset_versions"].sole["external_id"]
+    assert_equal "jira", json["source"]["system"]
+  end
+
+  def test_unknown_uri_returns_empty_list_not_error
+    json = run_cli_ok!("by-source", "https://nowhere.example/x")
+
+    assert_equal [], json["intents"]
+  end
+
+  def test_substring_match_finds_ticket_key_across_systems
+    a = record_intent!(stakeholder_references: [{ "system" => "jira", "uri" => URI }])
+    b = record_intent!(stakeholder_references: [{ "system" => "confluence", "uri" => "https://acme.atlassian.net/wiki/ACME-42-design" }])
+
+    json = run_cli_ok!("by-source", "ACME-42", "--contains")
+
+    assert_equal [a["intent_id"], b["intent_id"]].sort, json["intents"].map { |i| i["intent_id"] }.sort
+  end
+end
