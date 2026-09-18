@@ -23,8 +23,13 @@ class PortConfinementTest < Minitest::Test
 
   # The real shape of the mistake: no stub on App.run!, so the boot reaches the
   # bind. Refused rather than served.
+  #
+  # capture_io because Sinatra and Puma announce themselves on the way to a bind
+  # that is about to be refused, and a suite that prints "taken the stage on
+  # 4791" while proving nothing is listening is the misleading signal this whole
+  # guard exists to remove.
   def test_serving_for_real_without_a_stub_is_refused_rather_than_started
-    assert_raises(PortConfinement::Escape) { boot("--port", "4791") }
+    assert_raises(PortConfinement::Escape) { capture_io { boot("--port", "4791") } }
   end
 
   def test_a_deliberate_bind_is_allowed_when_a_test_says_so
