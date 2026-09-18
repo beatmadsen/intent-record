@@ -4,41 +4,21 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+Nothing has been released yet. Everything below describes what the first
+release will contain, not changes against a published version.
 
-### Fixed
-
-- Every list in a response comes back in an order the query names. A record's commits, stakeholder references and related intents are in the order they were attached, and the sources `by-source` matched are in the order they were first recorded. These queries named no order at all, so the answer was whatever the query plan produced, which is not insertion order: SQLite answers a query it can cover with an index by walking that index.
-- `lookup` reports an id recorded in two version control systems as ambiguous instead of answering with one of them. Ids are unique per system, not across them, so a Perforce changelist and a Subversion revision can spell the same; the lookup picked whichever row SQLite returned first and everything recorded against the other was missing from the answer, with nothing to say so. Pass `--vcs` to choose.
-- Two commands running at once no longer fail with "database is locked". ActiveRecord installs no busy handler unless it is given a `:timeout`, so a write that met a concurrent one gave up instead of waiting, and the failure escaped as a Ruby exception rather than `{"error": ...}`. Measured on four concurrent writers: 4 of 32 failed before, none after. Setting up a new store is also serialised on a lock file, because two processes reaching one together each found the tables missing and each created them.
-- `lookup` finds an id from a case-sensitive VCS when no `--vcs` is given. The id was lowercased before the search, so a Perforce changelist stored as `ABC123` resolved with `--vcs perforce` and not at all without it.
-- A database path that cannot be written reports `{"error": ...}` and exit 1. A read-only database file, or a database in a directory that exists but is not writable, let a Ruby exception escape instead.
-- `serve` rejects argv it does not understand, as every other command already did. It forwards its arguments to the web boot rather than through the dispatch that checks for leftovers, so `serve --bogus` started the server and said nothing, and a mistyped `--port` silently served on the default port instead of the one asked for.
-- `serve` reports a bad `--port` as `{"error": ...}` instead of letting a Ruby exception escape. A port above 65535 failed with a socket resolution error that never mentioned ports, and a port needing elevated privileges, such as 80, failed with a bare permission error.
-- A stakeholder URI with a scheme but no host has its scheme lowercased, so `MAILTO:a@b.com` and `mailto:a@b.com` are one source rather than two. A bare ticket key such as `ACME-42` is still kept exactly as written.
-
-### Changed
-
-- A mistyped command lists the commands there are, instead of only naming the one that was not understood.
-- `Config.new` now requires a `config_dir:`, and `Config.default` is the one way to reach the directory this user keeps their records in (`~/.intent-record`, or `INTENT_RECORD_CONFIG_DIR`). The CLI behaves exactly as before; the change matters only to code embedding the library, which can no longer arrive at somebody's own store by losing an argument.
-- `CLI::ArgvParser` is a class constructed around argv rather than a module whose methods mutated an array passed to them, and the stdin JSON reading that shared the module moved to `CLI::StdinJson`. The CLI behaves identically; the change matters only to code embedding the library.
-- Splitting over-long methods added public methods to three library modules: `InputValidator.non_blank_string!` and `InputValidator.within_length!`, `Database.establish!`, `Database.translating_unwritable` and `Database.migrate_and_seed!`, and `Web::Boot.serve!`. No existing method changed its name, arguments or behaviour, and the CLI is unaffected.
-- Leading and trailing whitespace is removed from every string field on input, so an author or a stakeholder title no longer keeps its padding. A summary is measured against the 350 character limit after trimming rather than before.
-
-## [1.0.0] - 2026-09-18
-
-First release.
+## Unreleased
 
 ### Added
 
-- `record`, `attach`, `show`, `lookup`, `search`, `by-source`, `recent`, `systems` and `serve` commands. JSON in on stdin, JSON out on stdout, exit 1 with `{"error": ...}` on failure.
-- SQLite store at `~/.intent-record/intent-record.db`, created and migrated on first use. Config directory can be moved with `INTENT_RECORD_CONFIG_DIR`.
+- `record`, `attach`, `show`, `lookup`, `search`, `by-source`, `recent`, `systems` and `serve` commands. JSON in on stdin, JSON out on stdout, exit 1 with `{"error": ...}` on failure. A command given argv it does not recognise says so instead of ignoring it, and a mistyped command lists the commands there are.
+- SQLite store at `~/.intent-record/intent-record.db`, created and migrated on first use. The config directory can be moved with `INTENT_RECORD_CONFIG_DIR`. A path that cannot be written reports `{"error": ...}` and exit 1, whether the database file itself is read-only or its directory is not writable.
 - Intent records link to any number of asset versions (commits) and stakeholder sources (Jira, Confluence, Linear and others), and to earlier intents they build on.
+- Every list in a response comes back in an order the query names. A record's commits, stakeholder references and related intents are in the order they were attached, and the sources `by-source` matched are in the order they were first recorded.
+- Prefix lookup for hash-based version control systems, from 4 characters up. Git hashes must be a full SHA-1 or SHA-256 and are stored lowercase. An id recorded in two systems is reported as ambiguous rather than answered with one of them, because ids are unique per system and not across them, so a Perforce changelist and a Subversion revision can spell the same thing. Pass `--vcs` to choose. An id from a case-sensitive system is found with or without `--vcs`.
 - Well-known VCS and stakeholder system names are seeded on connect.
-- Prefix lookup for hash-based VCSs. Git hashes must be full SHA-1 or SHA-256 and are stored lowercase.
-- URI normalisation for stakeholder sources: lowercase scheme and host, no trailing slash.
+- URI normalisation for stakeholder sources: lowercase scheme and host, no trailing slash. A URI with a scheme but no host still has its scheme lowercased, so `MAILTO:a@b.com` and `mailto:a@b.com` are one source rather than two. A bare ticket key such as `ACME-42` is kept exactly as written.
+- Leading and trailing whitespace is removed from every string field on input, so an author or a stakeholder title does not keep its padding, and a summary is measured against the 350 character limit after trimming.
 - Search covers summary, body and linked stakeholder URIs and titles, case-insensitive for non-ASCII letters.
-- Local web GUI on 127.0.0.1 with commit, intent, search and stakeholder-source pages.
-
-[Unreleased]: https://github.com/beatmadsen/intent-record/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/beatmadsen/intent-record/releases/tag/v1.0.0
+- Two commands can run at once. SQLite is given a busy timeout, so a write that meets a concurrent one waits rather than failing, and setting up a new store is serialised on a lock file, so two processes reaching one together do not both try to create the tables.
+- Local web GUI on 127.0.0.1 with commit, intent, search and stakeholder-source pages. `serve` takes `--port` and refuses a port outside 1 to 65535, one that needs elevated privileges, and one already in use, naming the port in each case.
