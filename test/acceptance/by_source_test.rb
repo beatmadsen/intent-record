@@ -49,7 +49,7 @@ class BySourceCommitsTest < Minitest::Test
 
     json = run_cli_ok!("by-source", URI)
 
-    assert_equal [A, B], json["asset_versions"].map { |v| v["external_id"] }
+    assert_equal([A, B], json["asset_versions"].map { |v| v["external_id"] })
     assert_equal({ "vcs" => "git", "external_id" => A }, json["asset_versions"].first)
   end
 end
