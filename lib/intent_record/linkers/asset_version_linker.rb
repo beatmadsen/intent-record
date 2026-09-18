@@ -1,16 +1,14 @@
 require_relative "../models/vcs_system"
 require_relative "../models/asset_version"
 require_relative "../models/intent_record_asset_version"
-require_relative "../input_validator"
 require_relative "../asset_version_normalizer"
+require_relative "asset_version_specs"
 
 module IntentRecord
   module Linkers
-    # Links an intent record to asset versions. Accepts `commits` (git shorthand) and
-    # `asset_versions` ([{vcs, external_id}]). Returns the linked versions.
+    # Links an intent record to the asset versions a payload names. Reading the
+    # payload is AssetVersionSpecs; this writes the rows. Returns the versions.
     class AssetVersionLinker
-      DEFAULT_VCS = "git".freeze
-
       def self.call(record, input)
         new(record).call(input)
       end
@@ -20,17 +18,10 @@ module IntentRecord
       end
 
       def call(input)
-        specs(input).map { |vcs, external_id| link!(vcs, external_id) }
+        AssetVersionSpecs.from(input).map { |vcs, external_id| link!(vcs, external_id) }
       end
 
       private
-
-      def specs(input)
-        commits = InputValidator.non_blank_strings!(InputValidator.array!(input, "commits"), "commit")
-        explicit = InputValidator.hashes_with!(InputValidator.array!(input, "asset_versions"),
-                                               "asset_versions", "vcs", "external_id")
-        commits.map { |c| [DEFAULT_VCS, c] } + explicit.map { |v| [v["vcs"], v["external_id"]] }
-      end
 
       def link!(raw_vcs, raw_id)
         vcs = AssetVersionNormalizer.vcs_name(raw_vcs)
