@@ -15,10 +15,21 @@ require "tmpdir"
 # a test that skipped its own directory and is sharing state with every other
 # test that did the same. TEST_SANDBOX_HOME checks that at exit.
 module TestSandbox
-  HOME = Dir.mktmpdir("intent-record-sandbox-")
-  OWNER = Process.pid
+  # One fixed path rather than a fresh temporary directory per process. The
+  # mutation lane runs the suite in a process per mutant, and those reach neither
+  # minitest's exit hook nor at_exit, so a per-process directory accumulated one
+  # empty leftover per mutant: measured, a thousand of them in an afternoon. A
+  # fixed path cannot accumulate.
+  HOME = File.join(Dir.tmpdir, "intent-record-test-sandbox")
 
+  # Emptied on the way in, because a breach from an earlier run is not this
+  # run's to report. Under the mutation lane several processes load this at
+  # once, so in principle one could clear evidence another just wrote; nothing
+  # writes here legitimately, and the cost is a missed report rather than a
+  # missed guard, since the fallback still lands here and not in the real store.
   def self.install!
+    FileUtils.rm_rf(HOME)
+    FileUtils.mkdir_p(HOME)
     ENV["INTENT_RECORD_CONFIG_DIR"] = HOME
     IntentRecord::Config.send(:remove_const, :DEFAULT_CONFIG_DIR)
     IntentRecord::Config.const_set(:DEFAULT_CONFIG_DIR, HOME)
@@ -71,9 +82,10 @@ end
 
 TestSandbox.install!
 Minitest::Test.include(TestSandbox::Guard)
-Minitest.after_run do
-  FileUtils.remove_entry(TestSandbox::HOME) if Process.pid == TestSandbox::OWNER && File.exist?(TestSandbox::HOME)
-end
+# at_exit rather than Minitest.after_run: the mutation lane runs the suite in a
+# process per mutant, and those do not reach minitest's own exit hook, so each
+# one left its sandbox behind. A thousand empty directories is only litter, but
+# litter in the place the suite uses to prove it stayed out of the real store.
 
 # Mutation testing already forks a worker per mutant. Forking again here would
 # multiply processes until the machine runs out of memory, so a mutation run

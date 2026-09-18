@@ -14,14 +14,13 @@ class FirstRunTest < Minitest::Test
   end
 
   def setup
-    @config_dir = Dir.mktmpdir("intent-record-first-run-")
+    @config_dir = temp_dir("first-run")
     @locked = []
   end
 
   def teardown
     IntentRecord::Database.disconnect!
     @locked.each { |dir| File.chmod(0o700, dir) if File.exist?(dir) }
-    FileUtils.rm_rf(@config_dir)
   end
 
   def test_first_run_creates_the_database_directory

@@ -24,7 +24,7 @@ class WebBootTest < Minitest::Test
   # Config resolved. Those are the same string right up until Config is wrong,
   # which is exactly when a test is running against somewhere that matters.
   def test_the_database_is_connected_before_the_server_starts
-    dir = Dir.mktmpdir("intent-record-serve-")
+    dir = temp_dir("serve")
     connected = nil
     record_connection = ->(**) { connected = ActiveRecord::Base.connection_db_config.database }
 
@@ -33,8 +33,6 @@ class WebBootTest < Minitest::Test
     end
 
     assert_equal File.join(dir, "intent-record.db"), connected
-  ensure
-    FileUtils.rm_rf(dir) if dir
   end
 
   def test_it_announces_the_address_it_is_serving_on

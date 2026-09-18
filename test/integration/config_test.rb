@@ -4,11 +4,7 @@ require "test_helper"
 # run it writes into a directory that does not exist yet.
 class ConfigTest < Minitest::Test
   def setup
-    @root = Dir.mktmpdir("intent-record-config-")
-  end
-
-  def teardown
-    FileUtils.rm_rf(@root)
+    @root = temp_dir("config")
   end
 
   # The store a person keeps their own records in is reachable only by asking for
