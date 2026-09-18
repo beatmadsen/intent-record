@@ -28,6 +28,14 @@ class StakeholderNormalizerUriTest < Minitest::Test
     assert_equal "//acme.example/browse/ACME-42", Normalizer.uri("//ACME.Example/browse/ACME-42")
   end
 
+  def test_downcases_the_scheme_of_a_uri_that_has_no_host
+    assert_equal "urn:uuid:ABC", Normalizer.uri("URN:uuid:ABC")
+  end
+
+  def test_drops_a_trailing_slash_from_a_value_with_no_host
+    assert_equal "ACME-42", Normalizer.uri("ACME-42/")
+  end
+
   def test_keeps_an_opaque_identifier_as_written
     assert_equal "ACME-42", Normalizer.uri("  ACME-42  ")
   end

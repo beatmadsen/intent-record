@@ -9,20 +9,24 @@ module IntentRecord
       raw.strip.downcase.gsub(/[\s_]+/, "-")
     end
 
+    # A value with neither scheme nor host is an opaque identifier such as a bare
+    # ticket key, and case is significant there. Anything else is a URI, whose
+    # scheme URI.parse has already downcased for us; only the host is left to do.
     def uri(raw)
       value = raw.strip
       parsed = URI.parse(value)
-      return value.chomp("/") unless parsed.is_a?(URI::Generic) && parsed.host
+      return value.chomp("/") unless parsed.scheme || parsed.host
 
-      downcased_authority(parsed).to_s.chomp("/")
+      downcased_host(parsed).to_s.chomp("/")
     rescue URI::InvalidURIError
       value
     end
 
-    def downcased_authority(parsed)
+    def downcased_host(parsed)
+      return parsed unless parsed.host
+
       normalized = parsed.dup
-      normalized.scheme = normalized.scheme.downcase if normalized.scheme
-      normalized.host = normalized.host.downcase
+      normalized.host = parsed.host.downcase
       normalized
     end
   end
