@@ -1,5 +1,6 @@
 # intent-record
 
+[![Gem Version](https://badge.fury.io/rb/intent-record.svg)](https://badge.fury.io/rb/intent-record)
 [![CI](https://github.com/beatmadsen/intent-record/actions/workflows/ci.yml/badge.svg)](https://github.com/beatmadsen/intent-record/actions/workflows/ci.yml)
 
 Local records storage for the intent behind individual code changes.
