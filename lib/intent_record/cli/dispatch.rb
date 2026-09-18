@@ -92,7 +92,7 @@ module IntentRecord
 
       def run_serve
         require_relative "../web/boot"
-        Web::Boot.run!(config: @config, argv: @argv)
+        Web::Boot.run!(config: @config, argv: @argv, streams: @streams)
         {}
       end
     end

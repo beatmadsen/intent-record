@@ -40,7 +40,7 @@ module IntentRecord
 
       error StandardError do
         status 500
-        warn "#{env["sinatra.error"].class}: #{env["sinatra.error"].message}"
+        env["rack.errors"].puts "#{env["sinatra.error"].class}: #{env["sinatra.error"].message}"
         erb :error, locals: { title: "Something went wrong", message: env["sinatra.error"].message }
       end
 

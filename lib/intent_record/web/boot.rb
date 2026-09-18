@@ -1,6 +1,7 @@
 require_relative "../config"
 require_relative "../database"
 require_relative "app"
+require_relative "../cli/streams"
 
 module IntentRecord
   module Web
@@ -25,11 +26,11 @@ module IntentRecord
         Options.new(port: port)
       end
 
-      def run!(config:, argv:)
+      def run!(config:, argv:, streams: CLI::Streams.default)
         opts = parse_argv(argv)
         config.load!
         Database.connect!(config.db_path)
-        warn "intent-record GUI on http://#{BIND}:#{opts.port} (db: #{config.db_path})"
+        streams.stderr.puts "intent-record GUI on http://#{BIND}:#{opts.port} (db: #{config.db_path})"
         App.run!(bind: BIND, port: opts.port)
       rescue Errno::EADDRINUSE
         raise Error, "Port #{opts.port} is already in use; pass --port to choose another"
