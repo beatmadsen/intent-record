@@ -13,13 +13,18 @@ module IntentRecord
     end
 
     def full(record)
-      summary(record).merge("body" => record.body).merge(links(record))
+      summary(record).merge("body" => record.body).merge(external_links(record)).merge(intent_links(record))
     end
 
-    def links(record)
+    def external_links(record)
       {
         "asset_versions" => record.asset_versions.includes(:vcs_system).map { |v| asset_version(v) },
-        "stakeholder_references" => record.stakeholder_sources.includes(:stakeholder_system).map { |s| source(s) },
+        "stakeholder_references" => record.stakeholder_sources.includes(:stakeholder_system).map { |s| source(s) }
+      }
+    end
+
+    def intent_links(record)
+      {
         "related_intents" => record.outgoing_links.includes(:target).map { |l| summary(l.target) },
         "related_by_intents" => record.incoming_links.includes(:source).map { |l| summary(l.source) }
       }
