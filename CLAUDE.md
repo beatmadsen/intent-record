@@ -14,7 +14,8 @@ Ruby gem: a local, agent-first store for the intent behind code changes, linked 
 
 - `lib/intent_record/commands/` one class per CLI command; the web routes call the same classes.
 - `lib/intent_record/linkers/` find-or-create logic for commits, stakeholder sources and related intents, shared by `record` and `attach`.
-- `lib/intent_record/cli/` argv parsing and dispatch. Adding a command means a `run_<name>` method in `Dispatch`, a line in `USAGE`, and a README row.
+- `lib/intent_record/cli/` argv parsing and dispatch. Adding a command means a `run_<name>` method in `Dispatch`, a line in `USAGE`, a README row, and a line in `UnknownArgvTest::ARGUMENTS` giving argv that gets it past its own required positionals. Tests fail if any of the last three are missing.
+- `ArgvParser` is constructed around argv and consumes it. It never alters the array it was given, so a caller that forwards its arguments on asks for `remaining`.
 - `lib/intent_record/web/routes/` one module per page, registered on `Web::App`.
 - `lib/intent_record/seeds.rb` well-known system names, applied idempotently on connect.
 

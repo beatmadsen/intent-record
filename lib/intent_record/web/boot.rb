@@ -20,9 +20,9 @@ module IntentRecord
       # Leftovers are rejected here too, because serve forwards its argv straight
       # to Boot and so never passes through Dispatch#finish!.
       def parse_argv(argv)
-        args = argv.dup
-        port = CLI::ArgvParser.take_integer_flag(args, "--port", DEFAULT_PORT)
-        CLI::ArgvParser.reject_leftovers!(args)
+        parser = CLI::ArgvParser.new(argv)
+        port = parser.take_integer_flag("--port", DEFAULT_PORT)
+        parser.reject_leftovers!
         raise ValidationError, "--port must be between #{PORT_RANGE.first} and #{PORT_RANGE.last}, got #{port}" \
           unless PORT_RANGE.cover?(port)
 

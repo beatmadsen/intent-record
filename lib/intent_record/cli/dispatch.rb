@@ -1,5 +1,6 @@
 require "json"
 require_relative "argv_parser"
+require_relative "stdin_json"
 require_relative "usage"
 require_relative "../commands/record"
 require_relative "../commands/show"
@@ -25,7 +26,7 @@ module IntentRecord
       end
 
       def initialize(argv, streams:, config:)
-        @argv = argv
+        @parser = ArgvParser.new(argv)
         @streams = streams
         @config = config
       end
@@ -49,16 +50,16 @@ module IntentRecord
       end
 
       def finish!
-        ArgvParser.reject_leftovers!(@argv)
+        @parser.reject_leftovers!
         yield
       end
 
       def stdin_json
-        ArgvParser.read_stdin_json(@streams.stdin)
+        StdinJson.read(@streams.stdin)
       end
 
       def positional(label)
-        ArgvParser.take_required_positional(@argv, label)
+        @parser.take_required_positional(label)
       end
 
       def run_record
@@ -71,25 +72,25 @@ module IntentRecord
       end
 
       def run_lookup
-        vcs = ArgvParser.take_flag(@argv, "--vcs")
+        vcs = @parser.take_flag("--vcs")
         command = Commands::Lookup.new(external_id: positional("external_id"), vcs: vcs)
         finish! { command.call }
       end
 
       def run_search
-        match = ArgvParser.take_flag(@argv, "--match") || "any"
-        terms = ArgvParser.take_positionals(@argv)
+        match = @parser.take_flag("--match") || "any"
+        terms = @parser.take_positionals
         finish! { Commands::Search.new(terms: terms, match: match).call }
       end
 
       def run_by_source
-        contains = ArgvParser.take_switch?(@argv, "--contains")
+        contains = @parser.take_switch?("--contains")
         command = Commands::BySource.new(uri: positional("uri"), contains: contains)
         finish! { command.call }
       end
 
       def run_recent
-        limit = ArgvParser.take_integer_flag(@argv, "--limit", Commands::Recent::DEFAULT_LIMIT)
+        limit = @parser.take_integer_flag("--limit", Commands::Recent::DEFAULT_LIMIT)
         finish! { Commands::Recent.new(limit: limit).call }
       end
 
@@ -104,7 +105,7 @@ module IntentRecord
 
       def run_serve
         require_relative "../web/boot"
-        Web::Boot.run!(config: @config, argv: @argv, streams: @streams)
+        Web::Boot.run!(config: @config, argv: @parser.remaining, streams: @streams)
         {}
       end
     end
