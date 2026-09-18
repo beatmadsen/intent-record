@@ -1,7 +1,7 @@
 require "test_helper"
 
-# The bare forms, where the flag arrives as the command itself rather than after
-# one. Both return before the database is touched.
+# --help and --version return before the database is touched, and --help is
+# honoured wherever it appears, which is why it is checked after a command too.
 class HelpAndVersionTest < Minitest::Test
   include IntentRecordDsl
 
@@ -14,6 +14,15 @@ class HelpAndVersionTest < Minitest::Test
 
   def test_short_help_on_its_own_prints_usage_to_stderr
     assert_match(/Usage: intent-record/, run_cli("-h").stderr)
+  end
+
+  # Not a bare form: the command has already been shifted off, so this is the
+  # only case where the flag has to be found in what is left of argv.
+  def test_help_after_a_command_prints_usage_instead_of_running_it
+    result = run_cli("show", "--help")
+
+    assert_equal 0, result.exit_code
+    assert_match(/Usage: intent-record/, result.stderr)
   end
 
   def test_the_version_command_prints_the_gem_version

@@ -17,9 +17,12 @@ module IntentRecord
 
       # Out of range, the bind fails with a resolution error that says nothing about
       # ports, so reject it here rather than let the socket layer explain it badly.
+      # Leftovers are rejected here too, because serve forwards its argv straight
+      # to Boot and so never passes through Dispatch#finish!.
       def parse_argv(argv)
         args = argv.dup
         port = CLI::ArgvParser.take_integer_flag(args, "--port", DEFAULT_PORT)
+        CLI::ArgvParser.reject_leftovers!(args)
         raise ValidationError, "--port must be between #{PORT_RANGE.first} and #{PORT_RANGE.last}, got #{port}" \
           unless PORT_RANGE.cover?(port)
 
