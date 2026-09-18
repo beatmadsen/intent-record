@@ -8,3 +8,4 @@
 # IntentRecord::Web" and the lane still reported a passing score.
 require "intent_record"
 require "intent_record/web/app"
+require "intent_record/web/boot"
