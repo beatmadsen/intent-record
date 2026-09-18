@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-09-18
+## [1.0.0] - 2026-09-18
 
 First release.
 
@@ -21,5 +21,5 @@ First release.
 - Search covers summary, body and linked stakeholder URIs and titles, case-insensitive for non-ASCII letters.
 - Local web GUI on 127.0.0.1 with commit, intent, search and stakeholder-source pages.
 
-[Unreleased]: https://github.com/beatmadsen/intent-record/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/beatmadsen/intent-record/releases/tag/v0.1.0
+[Unreleased]: https://github.com/beatmadsen/intent-record/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/beatmadsen/intent-record/releases/tag/v1.0.0
