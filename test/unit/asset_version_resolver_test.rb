@@ -61,6 +61,27 @@ class AssetVersionResolverTest < Minitest::Test
     assert_raises(IntentRecord::NotFoundError) { resolve("ABC123", vcs: "perforce") }
   end
 
+  # Perforce changelist 12345 and subversion revision 12345 are different things
+  # spelled the same way, and the schema allows both: ids are unique per system,
+  # not globally. Asked for 12345 with no --vcs, the resolver used to answer with
+  # whichever row SQLite handed it first, so the intents recorded against the
+  # other one were simply absent from the answer, with nothing to say so.
+  def test_an_id_recorded_in_two_systems_is_ambiguous_without_a_vcs
+    seed("12345", vcs: "perforce")
+    seed("12345", vcs: "subversion")
+
+    error = assert_raises(IntentRecord::ValidationError) { resolve("12345") }
+
+    assert_match(/ambiguous/i, error.message)
+  end
+
+  def test_an_id_recorded_in_two_systems_resolves_when_a_vcs_is_named
+    seed("12345", vcs: "perforce")
+    seed("12345", vcs: "subversion")
+
+    assert_equal "perforce", resolve("12345", vcs: "perforce").vcs_system.name
+  end
+
   def test_vcs_filter_is_case_insensitive
     seed("123", vcs: "perforce")
 

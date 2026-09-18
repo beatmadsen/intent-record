@@ -29,12 +29,24 @@ module IntentRecord
       @vcs ? [@external_id] : [@raw, @external_id].uniq
     end
 
+    # Ids are unique per version control system, not across them, so one spelling
+    # can name two different things. Answering with either of them would be
+    # SQLite's choice, and it would hide everything recorded against the other,
+    # so say so instead and let the caller name the system.
     def exact_match
       exact_candidates.each do |id|
-        found = scope.find_by(external_id: id)
-        return found if found
+        found = scope.where(external_id: id).to_a
+        next if found.empty?
+        raise ValidationError, ambiguous(id, found.size) if found.size > 1
+
+        return found.first
       end
       nil
+    end
+
+    def ambiguous(id, count)
+      "Ambiguous id #{id}: matches #{count} asset versions in different " \
+        "version control systems. Name one with --vcs."
     end
 
     def resolve_prefix
