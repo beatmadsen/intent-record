@@ -2,11 +2,32 @@ require "bundler/gem_tasks"
 require "rake/testtask"
 require "rubocop/rake_task"
 
-Rake::TestTask.new(:test) do |t|
-  t.libs << "test"
-  t.libs << "lib"
-  t.test_files = FileList["test/**/*_test.rb"]
-  t.verbose = false
+def test_task(name)
+  Rake::TestTask.new(name) do |t|
+    t.libs << "test"
+    t.libs << "lib"
+    t.test_files = FileList["test/**/*_test.rb"]
+    t.verbose = false
+  end
+end
+
+test_task(:test)
+
+namespace :test do
+  # The same suite, with the rows of every query that does not name its order
+  # reversed. SQL promises nothing about the order of those, and SQLite already
+  # answers some of them from an index rather than in insertion order, so a test
+  # that agrees with today's plan has proven nothing about tomorrow's. See
+  # test/support/unordered_rows.rb. It runs in the default gate because a lane
+  # that is only opt-in is a lane nobody runs.
+  task :chaos_rows do
+    ENV["CHAOS_UNORDERED_ROWS"] = "1"
+  end
+
+  test_task(:chaos_run)
+
+  desc "The suite again, with every unordered query answered backwards"
+  task chaos: %i[chaos_rows chaos_run]
 end
 
 RuboCop::RakeTask.new
@@ -45,4 +66,4 @@ namespace :mutation do
   end
 end
 
-task default: %i[test rubocop]
+task default: %i[test test:chaos rubocop]

@@ -26,9 +26,16 @@ module IntentRecord
       private
 
       def matching_sources
-        return Models::StakeholderSource.where(uri: StakeholderNormalizer.uri(@uri)) unless @contains
+        return sources.where(uri: StakeholderNormalizer.uri(@uri)) unless @contains
 
-        Models::StakeholderSource.where(LikePattern.contains("uri"), LikePattern.contains_bind(@uri))
+        sources.where(LikePattern.contains("uri"), LikePattern.contains_bind(@uri))
+      end
+
+      # In the order the sources were first recorded. An unordered query is
+      # answered in whatever order the plan produces, and that is a list a person
+      # reads.
+      def sources
+        Models::StakeholderSource.order(:id)
       end
 
       def intents_for(sources)

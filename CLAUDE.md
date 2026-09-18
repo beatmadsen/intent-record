@@ -7,7 +7,8 @@ Ruby gem: a local, agent-first store for the intent behind code changes, linked 
 - Ruby >= 3.2, ActiveRecord 8 on SQLite (WAL, foreign keys on), migrations in `db/migrate` run on every connect.
 - Sinatra 4 + Puma for `serve`, bound to 127.0.0.1 only.
 - Minitest, parallel by process; each test gets its own tmpdir, config and database. Rack::Test for web tests.
-- `bundle exec rake` runs tests then rubocop. Both must be green before a commit.
+- `bundle exec rake` runs the suite, then the same suite with every unordered query
+  answered backwards (`rake test:chaos`), then rubocop. All three must be green before a commit.
 
 ## Layout
 
@@ -19,6 +20,7 @@ Ruby gem: a local, agent-first store for the intent behind code changes, linked 
 
 ## Invariants
 
+- Every list the CLI or GUI prints has an order named in SQL. A query with no `ORDER BY` is answered in whatever order the plan produces, not insertion order.
 - External ids (commit hashes) are treated as globally unique. No repository identity is stored.
 - Internal database ids never appear in CLI output or HTML. Intents are addressed by 7-char base58 `global_id`.
 - System names are lowercased on input. Sources are unique per (system, uri).
