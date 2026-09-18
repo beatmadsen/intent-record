@@ -1,5 +1,8 @@
 require "test_helper"
 
+# What is left here is that `record` reaches the linker at all and reports what
+# it linked. The source, uniqueness and title rules are StakeholderLinker's, and
+# live in StakeholderLinkingTest.
 class RecordWithStakeholdersTest < Minitest::Test
   include IntentRecordDsl
 
@@ -14,27 +17,6 @@ class RecordWithStakeholdersTest < Minitest::Test
     assert_equal JIRA["uri"], source.uri
     assert_equal "Retry flaky fetch", source.title
     assert_equal "jira", source.stakeholder_system.name
-  end
-
-  def test_same_uri_in_same_system_is_deduplicated
-    record_intent!(stakeholder_references: [JIRA])
-    record_intent!(stakeholder_references: [JIRA.merge("title" => nil)])
-
-    assert_equal 1, IntentRecord::Models::StakeholderSource.count
-  end
-
-  def test_a_later_reference_without_a_title_keeps_the_stored_one
-    record_intent!(stakeholder_references: [JIRA])
-    record_intent!(stakeholder_references: [JIRA.except("title")])
-
-    assert_equal "Retry flaky fetch", IntentRecord::Models::StakeholderSource.sole.title
-  end
-
-  def test_a_later_reference_with_a_title_replaces_the_stored_one
-    record_intent!(stakeholder_references: [JIRA])
-    record_intent!(stakeholder_references: [JIRA.merge("title" => "Retry flaky fetch with backoff")])
-
-    assert_equal "Retry flaky fetch with backoff", IntentRecord::Models::StakeholderSource.sole.title
   end
 
   def test_rejects_reference_without_system

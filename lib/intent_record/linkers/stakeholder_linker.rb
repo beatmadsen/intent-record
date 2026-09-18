@@ -7,7 +7,12 @@ require_relative "../stakeholder_normalizer"
 module IntentRecord
   module Linkers
     # Links an intent record to stakeholder sources given as [{system, uri, title?}].
-    # A non-blank title replaces the stored one; a missing title leaves it alone.
+    # A source is unique per (system, uri), so the same ticket referenced under two
+    # systems is two sources.
+    #
+    # A non-blank title replaces the stored one. A title that is missing, null or
+    # blank leaves it alone, which means a title cannot be cleared once stored.
+    # Where one payload names the same source twice, the last title in it wins.
     class StakeholderLinker
       def self.call(record, input)
         new(record).call(input)
