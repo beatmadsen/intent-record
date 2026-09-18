@@ -26,6 +26,11 @@ module IntentRecord
       id
     end
 
+    # No test can currently tell this downcasing apart from leaving the id alone:
+    # the resolver tries the id as written too, and sqlite's LIKE is case-insensitive
+    # for ASCII, so the prefix path finds a hash whatever its case. It stays because
+    # hash ids are canonically lowercase here, and that should not depend on a
+    # collation default we do not set.
     def lookup_id(vcs, raw)
       id = raw.strip
       vcs.nil? || hash_based?(vcs) ? id.downcase : id

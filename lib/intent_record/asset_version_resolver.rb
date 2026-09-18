@@ -11,14 +11,31 @@ module IntentRecord
 
     def initialize(external_id:, vcs: nil)
       @vcs = vcs && AssetVersionNormalizer.vcs_name(vcs)
+      @raw = external_id.strip
       @external_id = AssetVersionNormalizer.lookup_id(@vcs, external_id)
     end
 
     def call
-      scope.find_by(external_id: @external_id) || resolve_prefix
+      exact_match || resolve_prefix
     end
 
     private
+
+    # With no vcs given the id could belong to a hash-based system, where case is
+    # insignificant, or to a case-sensitive one, where it is not, so both spellings
+    # are candidates. When a vcs is given the normaliser has already picked the one
+    # that system uses.
+    def exact_candidates
+      @vcs ? [@external_id] : [@raw, @external_id].uniq
+    end
+
+    def exact_match
+      exact_candidates.each do |id|
+        found = scope.find_by(external_id: id)
+        return found if found
+      end
+      nil
+    end
 
     def resolve_prefix
       candidates = prefix_candidates

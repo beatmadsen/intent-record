@@ -17,6 +17,15 @@ class ArgvParserTest < Minitest::Test
     assert_equal %w[a --vcs], argv
   end
 
+  # The value is found by looking forward from the flag. Every command today puts
+  # its value flag first, so nothing else notices if that lookup walks backwards.
+  def test_take_flag_finds_its_value_when_another_flag_comes_first
+    argv = %w[--contains --limit 5]
+
+    assert_equal "5", Parser.take_flag(argv, "--limit")
+    assert_equal %w[--contains], argv
+  end
+
   def test_take_integer_flag_defaults_when_absent
     assert_equal 7, Parser.take_integer_flag([], "--limit", 7)
   end

@@ -27,6 +27,28 @@ class AssetVersionResolverTest < Minitest::Test
     assert_raises(IntentRecord::NotFoundError) { resolve("abc") }
   end
 
+  def test_prefix_of_exactly_the_minimum_length_resolves
+    seed(FULL)
+
+    assert_equal FULL, resolve(FULL[0, IntentRecord::AssetVersionResolver::MIN_PREFIX_LENGTH]).external_id
+  end
+
+  # Resolves through the prefix query, whose LIKE is case-insensitive for ASCII,
+  # so this pins the outcome a user sees rather than the downcasing that precedes it.
+  def test_an_uppercase_hash_resolves_when_no_vcs_is_given
+    seed(FULL)
+
+    assert_equal FULL, resolve(FULL.upcase).external_id
+  end
+
+  # Without --vcs the id could belong to either family. Downcasing it on the way in
+  # put a case-sensitive id out of reach of every lookup that omitted the flag.
+  def test_a_case_sensitive_id_resolves_without_a_vcs_filter
+    seed("ABC123", vcs: "perforce")
+
+    assert_equal "ABC123", resolve("ABC123").external_id
+  end
+
   def test_like_wildcards_in_input_are_literal
     seed(FULL)
 
