@@ -1,6 +1,9 @@
 module IntentRecord
-  # Normalises external ids per VCS. Hash-based systems get lowercase hex ids and support
-  # prefix lookup; git ids must be full SHA-1 or SHA-256 hashes so prefixes stay unambiguous.
+  # Normalises external ids per VCS. Hash-based systems store their ids lowercased and
+  # support prefix lookup. Only git is checked for shape, and must be a full SHA-1 or
+  # SHA-256; the other hash-based systems take an id as given, so a prefix among those
+  # can collide, and the resolver reports that at lookup time rather than preventing it
+  # here.
   module AssetVersionNormalizer
     HASH_BASED = %w[git mercurial fossil sapling pijul darcs].freeze
     GIT_HASH = /\A(?:[0-9a-f]{40}|[0-9a-f]{64})\z/
@@ -26,11 +29,12 @@ module IntentRecord
       id
     end
 
-    # No test can currently tell this downcasing apart from leaving the id alone:
-    # the resolver tries the id as written too, and sqlite's LIKE is case-insensitive
-    # for ASCII, so the prefix path finds a hash whatever its case. It stays because
-    # hash ids are canonically lowercase here, and that should not depend on a
-    # collation default we do not set.
+    # Hash ids are canonically lowercase here, and that should not depend on a
+    # collation default we do not set. Nothing driving the CLI can tell this apart
+    # from leaving the id alone, because the resolver tries the id as written too
+    # and sqlite's LIKE folds ASCII case; the tests that decide it ask this
+    # directly, or go through the resolver below the prefix minimum, where there
+    # is no second chance from the prefix query.
     def lookup_id(vcs, raw)
       id = raw.strip
       vcs.nil? || hash_based?(vcs) ? id.downcase : id
