@@ -34,3 +34,22 @@ class BySourceTest < Minitest::Test
     assert_equal [a["intent_id"], b["intent_id"]].sort, json["intents"].map { |i| i["intent_id"] }.sort
   end
 end
+
+class BySourceCommitsTest < Minitest::Test
+  include IntentRecordDsl
+
+  URI = "https://acme.atlassian.net/browse/ACME-42".freeze
+  JIRA = { "system" => "jira", "uri" => URI }.freeze
+  A = "1111111111111111111111111111111111111111".freeze
+  B = "2222222222222222222222222222222222222222".freeze
+
+  def test_top_level_asset_versions_aggregate_distinct_commits_across_intents_in_order
+    record_intent!(summary: "first", commits: [A], stakeholder_references: [JIRA])
+    record_intent!(summary: "second", commits: [A, B], stakeholder_references: [JIRA])
+
+    json = run_cli_ok!("by-source", URI)
+
+    assert_equal [A, B], json["asset_versions"].map { |v| v["external_id"] }
+    assert_equal({ "vcs" => "git", "external_id" => A }, json["asset_versions"].first)
+  end
+end

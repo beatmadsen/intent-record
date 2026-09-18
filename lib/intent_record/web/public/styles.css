@@ -42,3 +42,7 @@ button:hover { background: var(--tint-strong); }
 .chip { background: var(--tint); border: 1px solid var(--border-soft); border-radius: 999px; padding: 3px 10px; font-size: 12px; }
 .chip.ext::after { content: " ↗"; color: var(--ink-mute); }
 .empty { color: var(--ink-mute); font-style: italic; }
+.card.tint { background: var(--tint); }
+.commit-list { list-style: none; margin: 0; padding: 0; }
+.commit-list li { margin: 4px 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+.commit-list .chip { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin-right: 6px; }

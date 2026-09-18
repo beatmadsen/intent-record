@@ -1,5 +1,16 @@
 <header>
   <h1>Stakeholder source: <%= h uri %></h1>
-  <p class="subtitle">Intents linked to any source whose URI contains this text</p>
+  <p class="subtitle">What was built for this, and why. Matches any source whose URI contains this text.</p>
 </header>
+<% if versions.any? %>
+  <section class="card tint">
+    <h2>Commits</h2>
+    <ul class="commit-list">
+      <% versions.each do |v| %>
+        <li><span class="chip"><%= h v["vcs"] %></span> <a class="commit-list-item" href="/commits/<%= h v["external_id"] %>?vcs=<%= h v["vcs"] %>"><%= h v["external_id"] %></a></li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>
+<h3>Intents</h3>
 <%= intent_cards(intents) %>
