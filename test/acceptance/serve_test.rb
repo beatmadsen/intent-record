@@ -15,25 +15,11 @@ class ServeTest < Minitest::Test
     # change which makes serve ignore --port, and so really start a server, fails
     # this test instead of hanging the run; it has to fire well before the
     # mutation lane's own per-mutant timeout, or that is what gives out first.
-    result = quietly { Timeout.timeout(5) { run_cli("serve", "--port", port.to_s) } }
+    result = nil
+    capture_io { Timeout.timeout(5) { result = run_cli("serve", "--port", port.to_s) } }
 
     assert_cli_rejected result, matching: /already in use/
   ensure
     blocker&.close
-  end
-
-  private
-
-  # Puma and Sinatra announce themselves on the real process streams, which the
-  # injected ones do not cover.
-  def quietly
-    original_out = $stdout
-    original_err = $stderr
-    $stdout = StringIO.new
-    $stderr = StringIO.new
-    yield
-  ensure
-    $stdout = original_out
-    $stderr = original_err
   end
 end
