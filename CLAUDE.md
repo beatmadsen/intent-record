@@ -18,6 +18,7 @@ Ruby gem: a local, agent-first store for the intent behind code changes, linked 
 - `ArgvParser` is constructed around argv and consumes it. It never alters the array it was given, so a caller that forwards its arguments on asks for `remaining`.
 - `lib/intent_record/web/routes/` one module per page, registered on `Web::App`.
 - `lib/intent_record/seeds.rb` well-known system names, applied idempotently on connect.
+- `Formatter.full` reads four associations per record and loads none of them, so any command formatting more than one record passes its scope through `Formatter.preloaded`. A test asserts the query count does not grow with the number of records.
 
 ## Invariants
 

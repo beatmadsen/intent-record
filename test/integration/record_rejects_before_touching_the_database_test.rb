@@ -30,19 +30,4 @@ class RecordRejectsBeforeTouchingTheDatabaseTest < Minitest::Test
   def refuses(input)
     assert_raises(IntentRecord::ValidationError) { record(input) }
   end
-
-  def queries_while(&)
-    seen = []
-    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
-      seen << payload[:sql] unless payload[:name] == "SCHEMA"
-    end
-    collecting(subscriber, &)
-    seen
-  end
-
-  def collecting(subscriber)
-    yield
-  ensure
-    ActiveSupport::Notifications.unsubscribe(subscriber)
-  end
 end

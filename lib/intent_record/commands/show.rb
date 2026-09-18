@@ -9,7 +9,7 @@ module IntentRecord
       end
 
       def call
-        record = Models::IntentRecord.find_by(global_id: @intent_id)
+        record = Formatter.preloaded(Models::IntentRecord).find_by(global_id: @intent_id)
         raise NotFoundError, "Intent record not found: #{@intent_id}" unless record
 
         Formatter.full(record)

@@ -25,10 +25,12 @@ module IntentRecord
       private
 
       def matching_records
-        Models::IntentRecord.left_joins(:stakeholder_sources)
-                            .group("intent_records.id")
-                            .having(having_sql, *having_binds)
-                            .order(created_at: :desc).limit(LIMIT)
+        Formatter.preloaded(
+          Models::IntentRecord.left_joins(:stakeholder_sources)
+                              .group("intent_records.id")
+                              .having(having_sql, *having_binds)
+                              .order(created_at: :desc).limit(LIMIT)
+        )
       end
 
       def having_sql

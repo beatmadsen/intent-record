@@ -14,7 +14,7 @@ module IntentRecord
         version = AssetVersionResolver.new(external_id: @external_id, vcs: @vcs).call
         {
           "asset_version" => Formatter.asset_version(version),
-          "intents" => version.intent_records.order(:created_at).map { |r| Formatter.full(r) }
+          "intents" => Formatter.preloaded(version.intent_records.order(:created_at)).map { |r| Formatter.full(r) }
         }
       end
     end

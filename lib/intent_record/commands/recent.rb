@@ -13,7 +13,7 @@ module IntentRecord
       def call
         raise ValidationError, "--limit must be at least 1" if @limit < 1
 
-        records = Models::IntentRecord.order(created_at: :desc, id: :desc).limit(@limit)
+        records = Formatter.preloaded(Models::IntentRecord.order(created_at: :desc, id: :desc).limit(@limit))
         { "intents" => records.map { |r| Formatter.full(r) } }
       end
     end

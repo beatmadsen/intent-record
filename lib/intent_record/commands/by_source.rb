@@ -39,9 +39,13 @@ module IntentRecord
       end
 
       def intents_for(sources)
+        Formatter.preloaded(matching_intents(sources)).map { |r| Formatter.full(r) }
+      end
+
+      def matching_intents(sources)
         Models::IntentRecord.joins(:stakeholder_references)
                             .where(stakeholder_references: { stakeholder_source_id: sources.map(&:id) })
-                            .distinct.order(:created_at).map { |r| Formatter.full(r) }
+                            .distinct.order(:created_at)
       end
     end
   end
