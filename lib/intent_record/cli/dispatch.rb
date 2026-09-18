@@ -76,6 +76,12 @@ module IntentRecord
       def run_systems
         Commands::Systems.new.call
       end
+
+      def run_serve
+        require_relative "../web/boot"
+        Web::Boot.run!(config: @config, argv: @argv)
+        {}
+      end
     end
   end
 end

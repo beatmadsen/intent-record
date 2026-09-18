@@ -1,0 +1,5 @@
+<header>
+  <h1><%= h version["vcs"] %> <code><%= h version["external_id"] %></code></h1>
+  <p class="subtitle"><%= intents.size %> intent record<%= intents.size == 1 ? "" : "s" %> for this asset version</p>
+</header>
+<%= intent_cards(intents) %>

@@ -1,0 +1,43 @@
+<% if records.empty? %>
+  <p class="empty">No intent records found.</p>
+<% end %>
+<% records.each do |r| %>
+  <article class="card intent">
+    <header>
+      <h2><a href="/intents/<%= h r["intent_id"] %>"><%= h r["summary"] %></a></h2>
+      <div class="meta">
+        <% if r["author"] %><span class="author"><%= h r["author"] %></span> · <% end %>
+        <span class="timestamp"><%= h r["created_at"] %></span>
+        · <code class="id"><%= h r["intent_id"] %></code>
+      </div>
+    </header>
+    <div class="body"><%= h r["body"] %></div>
+    <% if r["asset_versions"].any? %>
+      <div class="links">
+        <span class="label">Commits</span>
+        <% r["asset_versions"].each do |v| %>
+          <a class="chip" href="/commits/<%= h v["external_id"] %>?vcs=<%= h v["vcs"] %>"><%= h v["vcs"] %> <code><%= h v["external_id"][0, 12] %></code></a>
+        <% end %>
+      </div>
+    <% end %>
+    <% if r["stakeholder_references"].any? %>
+      <div class="links">
+        <span class="label">Stakeholders</span>
+        <% r["stakeholder_references"].each do |s| %>
+          <a class="chip ext" href="<%= h s["uri"] %>" target="_blank" rel="noopener"><%= h s["system"] %>: <%= h(s["title"] || s["uri"]) %></a>
+        <% end %>
+      </div>
+    <% end %>
+    <% if r["related_intents"].any? || r["related_by_intents"].any? %>
+      <div class="links">
+        <span class="label">Related</span>
+        <% r["related_intents"].each do |x| %>
+          <a class="chip" href="/intents/<%= h x["intent_id"] %>">builds on: <%= h x["summary"] %></a>
+        <% end %>
+        <% r["related_by_intents"].each do |x| %>
+          <a class="chip" href="/intents/<%= h x["intent_id"] %>">followed by: <%= h x["summary"] %></a>
+        <% end %>
+      </div>
+    <% end %>
+  </article>
+<% end %>

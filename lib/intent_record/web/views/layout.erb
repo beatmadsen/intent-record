@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>intent-record</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topnav">
+    <a class="brand" href="/">intent-record</a>
+    <form class="lookup" method="get" action="/go">
+      <input type="text" name="q" placeholder="Commit hash, ticket URL, or words" value="<%= h(params[:q] || params[:uri] || "") %>" autofocus>
+      <button type="submit">Look up</button>
+    </form>
+    <div class="who">localhost</div>
+  </header>
+  <main class="page">
+    <%= yield %>
+  </main>
+</body>
+</html>

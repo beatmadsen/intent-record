@@ -1,0 +1,14 @@
+<header>
+  <h1>What was this change for?</h1>
+  <p class="subtitle">Paste a commit hash above to read the intent recorded against it. Ticket URLs and free text work too.</p>
+</header>
+<% if recent.empty? %>
+  <section class="card muted">
+    <h2>Nothing recorded yet</h2>
+    <p>Agents record intent from the CLI:</p>
+    <pre>echo '{"summary": "Add retry to fetcher", "body": "Why: ...", "commits": ["&lt;git hash&gt;"]}' | intent-record record</pre>
+  </section>
+<% else %>
+  <h3>Recent intents</h3>
+  <%= intent_cards(recent) %>
+<% end %>
