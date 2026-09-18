@@ -3,3 +3,10 @@
 boot: test/mutation_boot.rb
 framework: minitest
 threshold: 90
+
+# Each mutant is a fork that runs its covering test files serially, and mutineer
+# kills a child that passes 10 seconds, a cap the fork path takes no flag for. At
+# one worker per core those children contend and overrun it: the default run on a
+# 14 core machine reported 31 of 209 mutants with no verdict, all timeouts, and
+# input_validator alone went from 10 timeouts to 21 of 21 killed at 4 jobs.
+jobs: 4
