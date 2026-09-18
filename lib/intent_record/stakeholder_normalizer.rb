@@ -14,11 +14,16 @@ module IntentRecord
       parsed = URI.parse(value)
       return value.chomp("/") unless parsed.is_a?(URI::Generic) && parsed.host
 
-      parsed.scheme = parsed.scheme.downcase
-      parsed.host = parsed.host.downcase
-      parsed.to_s.chomp("/")
+      downcased_authority(parsed).to_s.chomp("/")
     rescue URI::InvalidURIError
       value
+    end
+
+    def downcased_authority(parsed)
+      normalized = parsed.dup
+      normalized.scheme = normalized.scheme.downcase if normalized.scheme
+      normalized.host = normalized.host.downcase
+      normalized
     end
   end
 end
