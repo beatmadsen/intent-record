@@ -34,3 +34,35 @@ class SearchTest < Minitest::Test
     assert_cli_rejected run_cli("search"), matching: /term/
   end
 end
+
+class SearchStakeholderFieldsTest < Minitest::Test
+  include IntentRecordDsl
+
+  def test_search_matches_ticket_key_in_stakeholder_uri
+    hit = record_intent!(summary: "Nothing telling", body: "here",
+                         stakeholder_references: [{ "system" => "jira", "uri" => "https://j/browse/ACME-42" }])
+    record_intent!(summary: "Other", body: "thing")
+
+    json = run_cli_ok!("search", "acme-42")
+
+    assert_equal([hit["intent_id"]], json["results"].map { |r| r["intent_id"] })
+  end
+
+  def test_search_matches_stakeholder_title_with_match_all_across_fields
+    jira = { "system" => "jira", "uri" => "https://j/1", "title" => "Flaky fetch in CI" }
+    hit = record_intent!(summary: "Retry fetches", body: "with backoff", stakeholder_references: [jira])
+    record_intent!(summary: "Retry fetches", body: "with backoff")
+
+    json = run_cli_ok!("search", "flaky", "backoff", "--match", "all")
+
+    assert_equal([hit["intent_id"]], json["results"].map { |r| r["intent_id"] })
+  end
+
+  def test_search_returns_each_intent_once_despite_multiple_matching_sources
+    refs = [{ "system" => "jira", "uri" => "https://j/ACME-1" },
+            { "system" => "confluence", "uri" => "https://c/ACME-1" }]
+    record_intent!(stakeholder_references: refs)
+
+    assert_equal 1, run_cli_ok!("search", "acme")["results"].size
+  end
+end

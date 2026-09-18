@@ -13,6 +13,14 @@ class HomePageTest < WebAcceptanceCase
     assert_body_includes HASH[0, 12]
   end
 
+  def test_every_page_says_how_records_get_in
+    record_intent!(summary: "Retry HTTP fetch")
+
+    get "/"
+
+    assert_body_includes "intent-record record"
+  end
+
   def test_home_with_no_records_explains_how_to_record_one
     get "/"
 

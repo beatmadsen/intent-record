@@ -3,9 +3,11 @@ require_relative "../models/intent_record"
 
 module IntentRecord
   module Commands
-    # Case-insensitive substring search over summary and body.
+    # Case-insensitive substring search over summary, body, and linked stakeholder uris and titles,
+    # so a ticket key such as ACME-42 finds the intents built for it.
     class Search
       LIMIT = 200
+      FIELDS = %w[intent_records.summary intent_records.body stakeholder_sources.uri stakeholder_sources.title].freeze
 
       def initialize(terms:, match: "any")
         @terms = terms.map(&:strip).reject(&:empty?)
@@ -22,14 +24,23 @@ module IntentRecord
       private
 
       def matching_records
-        clauses = @terms.map { clause }
-        joiner = @match == "all" ? " AND " : " OR "
-        Models::IntentRecord.where(clauses.join(joiner), *@terms.flat_map { |t| [like(t)] * 2 })
+        Models::IntentRecord.left_joins(:stakeholder_sources)
+                            .group("intent_records.id")
+                            .having(having_sql, *having_binds)
                             .order(created_at: :desc).limit(LIMIT)
       end
 
-      def clause
-        "(LOWER(summary) LIKE ? OR LOWER(body) LIKE ?)"
+      def having_sql
+        joiner = @match == "all" ? " AND " : " OR "
+        @terms.map { "SUM(CASE WHEN #{term_clause} THEN 1 ELSE 0 END) > 0" }.join(joiner)
+      end
+
+      def term_clause
+        FIELDS.map { |f| "LOWER(#{f}) LIKE ?" }.join(" OR ")
+      end
+
+      def having_binds
+        @terms.flat_map { |t| [like(t)] * FIELDS.size }
       end
 
       def like(term)

@@ -19,5 +19,10 @@
   <main class="page">
     <%= yield %>
   </main>
+  <footer class="footer">
+    Records are written by agents and people from the command line:
+    <code>echo '{"summary": "...", "body": "...", "commits": ["&lt;hash&gt;"]}' | intent-record record</code>
+    · run <code>intent-record --help</code> for the rest.
+  </footer>
 </body>
 </html>
