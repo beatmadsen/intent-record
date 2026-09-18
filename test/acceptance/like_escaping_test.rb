@@ -20,6 +20,19 @@ class LikeEscapingTest < Minitest::Test
     assert_equal([hit["intent_id"]], run_cli_ok!("search", "done_now")["intents"].map { |r| r["intent_id"] })
   end
 
+  # The escape character itself, which is the case that needs the database: the
+  # ESCAPE clause and the character ActiveRecord escapes with have to agree, and
+  # only a real query can tell whether they do. LikePatternTest checks the two
+  # names match; this checks SQLite then reads the pattern that way.
+  def test_search_matches_a_literal_escape_character
+    hit = record_intent!(summary: "back\\slash here", body: "b")
+    record_intent!(summary: "backXslash here", body: "b")
+
+    found = run_cli_ok!("search", "back\\slash")["intents"].map { |r| r["intent_id"] }
+
+    assert_equal([hit["intent_id"]], found)
+  end
+
   def test_by_source_contains_matches_a_literal_percent
     hit = record_intent!(stakeholder_references: [{ "system" => "web", "uri" => "https://w/100%25_done" }])
     record_intent!(stakeholder_references: [{ "system" => "web", "uri" => "https://w/100x25xdone" }])

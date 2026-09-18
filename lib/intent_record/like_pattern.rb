@@ -27,5 +27,8 @@ module IntentRecord
     def escape(term)
       ActiveRecord::Base.sanitize_sql_like(term)
     end
+
+    # A step of the two binds, not part of what this module offers callers.
+    private_class_method :escape
   end
 end
