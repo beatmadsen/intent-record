@@ -1,0 +1,5 @@
+# Boot the library once in the parent so per-file load order never matters,
+# then fork per mutant. `redefine` is passed by the rake task.
+boot: lib/intent_record.rb
+framework: minitest
+threshold: 80

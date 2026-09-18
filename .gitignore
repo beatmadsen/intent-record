@@ -7,3 +7,4 @@ coverage/
 *.db
 *.sqlite3
 .playwright-mcp/
+.mutineer/

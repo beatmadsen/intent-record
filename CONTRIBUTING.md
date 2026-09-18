@@ -11,6 +11,21 @@ bundle exec rake   # tests, then rubocop; both must pass
 
 Tests run in parallel with one temporary database per test, so nothing touches `~/.intent-record`.
 
+## Mutation testing
+
+```bash
+bundle exec rake mutation   # mutineer over lib, fails below the threshold in .mutineer.yml
+```
+
+Each surviving mutant is a change to `lib` that no test objected to. Either add the
+test that objects, or, when the mutant is equivalent to the original code, say so in
+the pull request.
+
+The lane sets `MUTATION_TESTING=1`, which turns off the process-based parallel
+executor in `test/test_helper.rb`. Without that, mutineer forks a worker per mutant
+and each worker forks the whole parallel suite again, which exhausts memory on a
+machine with many cores. Keep the guard in place when changing the test helper.
+
 ## Changes
 
 - Add a failing test before the fix or feature, then make it pass.
