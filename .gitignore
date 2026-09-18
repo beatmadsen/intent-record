@@ -6,3 +6,4 @@ tmp/
 coverage/
 *.db
 *.sqlite3
+.playwright-mcp/
