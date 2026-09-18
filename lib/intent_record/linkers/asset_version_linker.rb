@@ -2,6 +2,7 @@ require_relative "../models/vcs_system"
 require_relative "../models/asset_version"
 require_relative "../models/intent_record_asset_version"
 require_relative "../input_validator"
+require_relative "../asset_version_normalizer"
 
 module IntentRecord
   module Linkers
@@ -31,8 +32,9 @@ module IntentRecord
         commits.map { |c| [DEFAULT_VCS, c] } + explicit.map { |v| [v["vcs"], v["external_id"]] }
       end
 
-      def link!(vcs, external_id)
-        version = find_or_create_version(vcs.strip.downcase, external_id.strip)
+      def link!(raw_vcs, raw_id)
+        vcs = AssetVersionNormalizer.vcs_name(raw_vcs)
+        version = find_or_create_version(vcs, AssetVersionNormalizer.external_id(vcs, raw_id))
         Models::IntentRecordAssetVersion.find_or_create_by!(intent_record: @record, asset_version: version) do |l|
           l.created_at = Time.now.utc
         end

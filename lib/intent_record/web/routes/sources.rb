@@ -4,7 +4,7 @@ module IntentRecord
   module Web
     module Routes
       module Sources
-        EMPTY = { "intents" => [], "asset_versions" => [] }.freeze
+        EMPTY = { "intents" => [], "asset_versions" => [], "sources" => [] }.freeze
 
         def self.registered(app)
           app.get "/sources" do

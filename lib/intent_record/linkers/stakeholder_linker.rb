@@ -2,10 +2,12 @@ require_relative "../models/stakeholder_system"
 require_relative "../models/stakeholder_source"
 require_relative "../models/stakeholder_reference"
 require_relative "../input_validator"
+require_relative "../stakeholder_normalizer"
 
 module IntentRecord
   module Linkers
     # Links an intent record to stakeholder sources given as [{system, uri, title?}].
+    # A non-blank title replaces the stored one; a missing title leaves it alone.
     class StakeholderLinker
       def self.call(record, input)
         new(record).call(input)
@@ -32,13 +34,18 @@ module IntentRecord
       end
 
       def find_or_create_source(ref)
-        system = Models::StakeholderSystem.find_or_create_by!(name: ref["system"].strip.downcase) do |s|
-          s.created_at = Time.now.utc
-        end
-        Models::StakeholderSource.find_or_create_by!(stakeholder_system: system, uri: ref["uri"].strip) do |src|
-          src.title = InputValidator.optional_string!(ref, "title")
-          src.created_at = Time.now.utc
-        end
+        system = find_or_create_system(StakeholderNormalizer.system_name(ref["system"]))
+        source = Models::StakeholderSource.find_or_initialize_by(stakeholder_system: system,
+                                                                 uri: StakeholderNormalizer.uri(ref["uri"]))
+        title = InputValidator.optional_string!(ref, "title")
+        source.title = title if title
+        source.created_at ||= Time.now.utc
+        source.save!
+        source
+      end
+
+      def find_or_create_system(name)
+        Models::StakeholderSystem.find_or_create_by!(name: name) { |s| s.created_at = Time.now.utc }
       end
     end
   end

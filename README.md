@@ -29,7 +29,7 @@ echo '{
     {"system": "jira", "uri": "https://acme.atlassian.net/browse/ACME-42", "title": "Flaky fetch in CI"}
   ]
 }' | intent-record record
-# => {"intent_id":"EUt4WMY"}
+# => {"intent_id":"EUt4WMY","summary":"Retry flaky fetches with backoff", ... full record ...}
 
 # Later, someone stares at that commit in git blame
 intent-record lookup 8f3a1c2
@@ -51,7 +51,7 @@ JSON in on stdin where input is needed, JSON out on stdout, exit code 0 on succe
 | `attach <intent_id>` | Link more commits, stakeholder references or related intents to an existing record (JSON via stdin) |
 | `show <intent_id>` | Full intent record with commits, stakeholder links and related intents |
 | `lookup <commit> [--vcs name]` | All intents recorded against a commit. Accepts a full hash or a unique prefix of at least 4 characters |
-| `search <terms...> [--match all]` | Case-insensitive substring search over summary and body |
+| `search <terms...> [--match all]` | Case-insensitive substring search over summary, body, and linked stakeholder URIs and titles, so a ticket key finds its intents |
 | `by-source <uri> [--contains]` | Intents linked to a stakeholder source, plus the distinct commits across them. `--contains` matches a substring such as a ticket key |
 | `recent [--limit N]` | Newest intents first |
 | `systems` | Known VCS and stakeholder system names |
@@ -70,6 +70,12 @@ JSON in on stdin where input is needed, JSON out on stdout, exit code 0 on succe
   "related_intent_ids": ["intent ids this change builds on"]
 }
 ```
+
+Options take either `--name value` or `--name=value`. Unknown options and stray arguments are rejected rather than ignored.
+
+Git commits must be full SHA-1 or SHA-256 hashes; they are stored lowercase. Prefix lookup applies to hash-based systems only (git, mercurial, fossil, sapling, pijul, darcs), so a Perforce changelist `1234` never matches `12345`. URIs are normalised (lowercase scheme and host, no trailing slash) and system names are lowercased and hyphenated, so `Jira` and `jira`, or a ticket URL with and without a trailing slash, are one source. A later non-blank `title` for a source replaces the stored one.
+
+`record` and `attach` both return the full intent record.
 
 An intent can be recorded before the commit exists and linked with `attach` afterwards. This also covers rebases and squashes, where the same intent ends up on a new hash. One commit can carry several intents and one intent can span several commits.
 

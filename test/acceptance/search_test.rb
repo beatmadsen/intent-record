@@ -10,7 +10,7 @@ class SearchTest < Minitest::Test
 
     json = run_cli_ok!("search", "retry")
 
-    assert_equal [hit["intent_id"], also["intent_id"]].sort, json["results"].map { |r| r["intent_id"] }.sort
+    assert_equal [hit["intent_id"], also["intent_id"]].sort, json["intents"].map { |r| r["intent_id"] }.sort
   end
 
   def test_search_match_all_requires_every_term
@@ -19,13 +19,13 @@ class SearchTest < Minitest::Test
 
     json = run_cli_ok!("search", "retry", "backoff", "--match", "all")
 
-    assert_equal([both["intent_id"]], json["results"].map { |r| r["intent_id"] })
+    assert_equal([both["intent_id"]], json["intents"].map { |r| r["intent_id"] })
   end
 
   def test_search_results_include_commits
     record_intent!(summary: "Retry", commits: ["abc1234abc1234abc1234abc1234abc1234abc12"])
 
-    result = run_cli_ok!("search", "retry")["results"].sole
+    result = run_cli_ok!("search", "retry")["intents"].sole
 
     assert_equal "abc1234abc1234abc1234abc1234abc1234abc12", result["asset_versions"].sole["external_id"]
   end
@@ -45,7 +45,7 @@ class SearchStakeholderFieldsTest < Minitest::Test
 
     json = run_cli_ok!("search", "acme-42")
 
-    assert_equal([hit["intent_id"]], json["results"].map { |r| r["intent_id"] })
+    assert_equal([hit["intent_id"]], json["intents"].map { |r| r["intent_id"] })
   end
 
   def test_search_matches_stakeholder_title_with_match_all_across_fields
@@ -55,7 +55,7 @@ class SearchStakeholderFieldsTest < Minitest::Test
 
     json = run_cli_ok!("search", "flaky", "backoff", "--match", "all")
 
-    assert_equal([hit["intent_id"]], json["results"].map { |r| r["intent_id"] })
+    assert_equal([hit["intent_id"]], json["intents"].map { |r| r["intent_id"] })
   end
 
   def test_search_returns_each_intent_once_despite_multiple_matching_sources
@@ -63,6 +63,6 @@ class SearchStakeholderFieldsTest < Minitest::Test
             { "system" => "confluence", "uri" => "https://c/ACME-1" }]
     record_intent!(stakeholder_references: refs)
 
-    assert_equal 1, run_cli_ok!("search", "acme")["results"].size
+    assert_equal 1, run_cli_ok!("search", "acme")["intents"].size
   end
 end

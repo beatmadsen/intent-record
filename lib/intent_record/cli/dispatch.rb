@@ -13,6 +13,7 @@ require_relative "../commands/systems"
 module IntentRecord
   class CLI
     # Maps a command name to the command object that handles it and prints its JSON result.
+    # Each run_* parses argv fully, then `finish!` rejects anything left over before running.
     class Dispatch
       def initialize(argv, streams:, config:)
         @argv = argv
@@ -34,6 +35,11 @@ module IntentRecord
         0
       end
 
+      def finish!
+        ArgvParser.reject_leftovers!(@argv)
+        yield
+      end
+
       def stdin_json
         ArgvParser.read_stdin_json(@streams.stdin)
       end
@@ -43,38 +49,45 @@ module IntentRecord
       end
 
       def run_record
-        Commands::Record.new.call(stdin_json)
+        finish! { Commands::Record.new.call(stdin_json) }
       end
 
       def run_show
-        Commands::Show.new(intent_id: positional("intent_id")).call
+        command = Commands::Show.new(intent_id: positional("intent_id"))
+        finish! { command.call }
       end
 
       def run_lookup
         vcs = ArgvParser.take_flag(@argv, "--vcs")
-        Commands::Lookup.new(external_id: positional("external_id"), vcs: vcs).call
+        command = Commands::Lookup.new(external_id: positional("external_id"), vcs: vcs)
+        finish! { command.call }
       end
 
       def run_search
         match = ArgvParser.take_flag(@argv, "--match") || "any"
-        Commands::Search.new(terms: @argv, match: match).call
+        options, terms = @argv.partition { |a| a.start_with?("--") }
+        @argv.replace(options)
+        finish! { Commands::Search.new(terms: terms, match: match).call }
       end
 
       def run_by_source
-        contains = !@argv.delete("--contains").nil?
-        Commands::BySource.new(uri: positional("uri"), contains: contains).call
+        contains = ArgvParser.take_switch?(@argv, "--contains")
+        command = Commands::BySource.new(uri: positional("uri"), contains: contains)
+        finish! { command.call }
       end
 
       def run_recent
-        Commands::Recent.new(limit: ArgvParser.take_integer_flag(@argv, "--limit", Commands::Recent::DEFAULT_LIMIT)).call
+        limit = ArgvParser.take_integer_flag(@argv, "--limit", Commands::Recent::DEFAULT_LIMIT)
+        finish! { Commands::Recent.new(limit: limit).call }
       end
 
       def run_attach
-        Commands::Attach.new(intent_id: positional("intent_id")).call(stdin_json)
+        command = Commands::Attach.new(intent_id: positional("intent_id"))
+        finish! { command.call(stdin_json) }
       end
 
       def run_systems
-        Commands::Systems.new.call
+        finish! { Commands::Systems.new.call }
       end
 
       def run_serve

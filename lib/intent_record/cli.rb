@@ -18,7 +18,7 @@ module IntentRecord
 
     def run
       command = @argv.shift
-      return usage if command.nil? || %w[--help -h].include?(command)
+      return usage if command.nil? || (@argv + [command]).intersect?(%w[--help -h])
       return version if %w[--version version].include?(command)
 
       connect!

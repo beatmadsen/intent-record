@@ -25,6 +25,8 @@ module IntentRecord
         Database.connect!(config.db_path)
         warn "intent-record GUI on http://#{BIND}:#{opts.port} (db: #{config.db_path})"
         App.run!(bind: BIND, port: opts.port)
+      rescue Errno::EADDRINUSE
+        raise Error, "Port #{opts.port} is already in use; pass --port to choose another"
       end
     end
   end

@@ -15,7 +15,7 @@ class BySourceTest < Minitest::Test
 
     assert_equal([a["intent_id"]], json["intents"].map { |i| i["intent_id"] })
     assert_equal "1111111111111111111111111111111111111111", json["intents"].sole["asset_versions"].sole["external_id"]
-    assert_equal "jira", json["source"]["system"]
+    assert_equal "jira", json["sources"].sole["system"]
   end
 
   def test_unknown_uri_returns_empty_list_not_error

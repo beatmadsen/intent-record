@@ -25,7 +25,8 @@ module IntentRecord
     end
 
     def array!(input, key)
-      value = input.fetch(key, [])
+      value = input[key]
+      return [] if value.nil?
       raise ValidationError, "#{key} must be an array" unless value.is_a?(Array)
 
       value

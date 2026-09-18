@@ -1,4 +1,5 @@
 require_relative "../formatter"
+require_relative "../like_pattern"
 require_relative "../models/intent_record"
 
 module IntentRecord
@@ -18,7 +19,7 @@ module IntentRecord
         raise ValidationError, "At least one search term is required" if @terms.empty?
         raise ValidationError, "--match must be any or all" unless %w[any all].include?(@match)
 
-        { "results" => matching_records.map { |r| Formatter.full(r) } }
+        { "intents" => matching_records.map { |r| Formatter.full(r) } }
       end
 
       private
@@ -36,15 +37,11 @@ module IntentRecord
       end
 
       def term_clause
-        FIELDS.map { |f| "LOWER(#{f}) LIKE ?" }.join(" OR ")
+        FIELDS.map { |f| LikePattern.contains(f) }.join(" OR ")
       end
 
       def having_binds
-        @terms.flat_map { |t| [like(t)] * FIELDS.size }
-      end
-
-      def like(term)
-        "%#{Models::IntentRecord.sanitize_sql_like(term.downcase)}%"
+        @terms.flat_map { |t| [LikePattern.contains_bind(t)] * FIELDS.size }
       end
     end
   end

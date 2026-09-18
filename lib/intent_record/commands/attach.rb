@@ -26,7 +26,7 @@ module IntentRecord
       private
 
       def nothing_to_attach?(input)
-        LINK_KEYS.none? { |key| input[key].is_a?(Array) && input[key].any? }
+        LINK_KEYS.none? { |key| !input[key].nil? && input[key] != [] }
       end
 
       def link_all(record, input)

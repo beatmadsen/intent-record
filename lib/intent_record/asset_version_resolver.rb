@@ -1,18 +1,21 @@
 require_relative "models/asset_version"
 require_relative "models/vcs_system"
+require_relative "asset_version_normalizer"
+require_relative "like_pattern"
 
 module IntentRecord
-  # Resolves an external id (full or unique prefix, as with short git hashes) to one asset version.
+  # Resolves an external id to one asset version. Exact match first; for hash-based VCSs a
+  # unique prefix of at least MIN_PREFIX_LENGTH characters also resolves.
   class AssetVersionResolver
     MIN_PREFIX_LENGTH = 4
 
     def initialize(external_id:, vcs: nil)
-      @external_id = external_id.strip
-      @vcs = vcs&.strip&.downcase
+      @vcs = vcs && AssetVersionNormalizer.vcs_name(vcs)
+      @external_id = AssetVersionNormalizer.lookup_id(@vcs, external_id)
     end
 
     def call
-      exact = scope.find_by(external_id: @external_id)
+      exact = scope.find_by(external_id: @external_id) || scope.find_by(external_id: @external_id.downcase)
       return exact if exact
 
       candidates = prefix_candidates
@@ -28,15 +31,16 @@ module IntentRecord
     private
 
     def scope
-      base = Models::AssetVersion.includes(:vcs_system)
-      @vcs ? base.joins(:vcs_system).where(vcs_systems: { name: @vcs }) : base
+      base = Models::AssetVersion.includes(:vcs_system).joins(:vcs_system)
+      @vcs ? base.where(vcs_systems: { name: @vcs }) : base
     end
 
     def prefix_candidates
       return [] if @external_id.length < MIN_PREFIX_LENGTH
 
-      pattern = "#{Models::AssetVersion.sanitize_sql_like(@external_id)}%"
-      scope.where("asset_versions.external_id LIKE ?", pattern).limit(2).to_a
+      scope.where(vcs_systems: { name: AssetVersionNormalizer::HASH_BASED })
+           .where(LikePattern.prefix("asset_versions.external_id"), LikePattern.prefix_bind(@external_id.downcase))
+           .to_a
     end
   end
 end
