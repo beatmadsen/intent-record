@@ -25,11 +25,16 @@ module IntentRecord
       value
     end
 
+    # Judged by its stripped form, so returned stripped too. Returning the padded
+    # value would hand a caller something this module has already treated as the
+    # same as a shorter string, and a caller that looks an id up verbatim would
+    # then miss a record that exists.
     def non_blank_strings!(values, label)
-      values.each do |v|
+      values.map do |v|
         raise ValidationError, "#{label} must be a non-empty string" unless v.is_a?(String) && !v.strip.empty?
+
+        v.strip
       end
-      values
     end
 
     def hashes_with!(values, label, *keys)

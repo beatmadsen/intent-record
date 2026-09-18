@@ -40,6 +40,13 @@ class ShowTest < Minitest::Test
     assert_match(/\A\d{4}-\d{2}-\d{2}T/, shown["created_at"])
   end
 
+  # An id an agent assembled with a stray space still names the same record.
+  def test_show_finds_a_record_from_a_padded_id
+    id = record_intent!["intent_id"]
+
+    assert_equal id, run_cli_ok!("show", "  #{id}  ")["intent_id"]
+  end
+
   def test_show_unknown_id_is_not_found
     assert_cli_rejected run_cli("show", "zzzzzzz"), matching: /not found/i
   end

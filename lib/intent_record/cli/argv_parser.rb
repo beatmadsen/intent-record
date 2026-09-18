@@ -31,11 +31,14 @@ module IntentRecord
         raw.to_i
       end
 
+      # Judged by its stripped form, so returned stripped too. Handing back the
+      # padded value let a command look an id up verbatim and miss a record that
+      # exists.
       def take_required_positional(label)
         value = @argv.shift
         raise ValidationError, "#{label} is required" if value.nil? || value.strip.empty?
 
-        value
+        value.strip
       end
 
       # Everything that is not an option. The options are kept, so

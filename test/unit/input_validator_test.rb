@@ -74,6 +74,13 @@ class InputValidatorTest < Minitest::Test
     assert_match(/commit must be a non-empty string/, error.message)
   end
 
+  # It already judged each entry by its stripped form, so returning the padded
+  # one leaves callers holding a value this module has implicitly accepted as
+  # equivalent to a shorter one. Every other reader here returns what it trimmed.
+  def test_non_blank_strings_returns_the_values_stripped
+    assert_equal %w[abc def], V.non_blank_strings!(["  abc  ", "\tdef\n"], "commit")
+  end
+
   def test_non_blank_strings_returns_the_values_when_all_are_non_blank
     assert_equal %w[abc def], V.non_blank_strings!(%w[abc def], "commit")
   end

@@ -61,6 +61,14 @@ class ArgvParserTest < Minitest::Test
     assert_raises(IntentRecord::ValidationError) { parser(%w[--limit x]).take_integer_flag("--limit", 7) }
   end
 
+  # Same shape as InputValidator.non_blank_strings!: it is judged by its stripped
+  # form, so it is returned stripped. Handing back the padded value let `show`
+  # miss a record that exists, while `lookup` and `by-source` escaped it only
+  # because each strips again in its own constructor.
+  def test_take_required_positional_returns_the_value_stripped
+    assert_equal "abc1234", parser(["  abc1234  "]).take_required_positional("intent_id")
+  end
+
   def test_take_required_positional_rejects_blank
     assert_raises(IntentRecord::ValidationError) { parser([" "]).take_required_positional("id") }
   end
