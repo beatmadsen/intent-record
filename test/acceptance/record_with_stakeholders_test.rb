@@ -23,6 +23,20 @@ class RecordWithStakeholdersTest < Minitest::Test
     assert_equal 1, IntentRecord::Models::StakeholderSource.count
   end
 
+  def test_a_later_reference_without_a_title_keeps_the_stored_one
+    record_intent!(stakeholder_references: [JIRA])
+    record_intent!(stakeholder_references: [JIRA.except("title")])
+
+    assert_equal "Retry flaky fetch", IntentRecord::Models::StakeholderSource.sole.title
+  end
+
+  def test_a_later_reference_with_a_title_replaces_the_stored_one
+    record_intent!(stakeholder_references: [JIRA])
+    record_intent!(stakeholder_references: [JIRA.merge("title" => "Retry flaky fetch with backoff")])
+
+    assert_equal "Retry flaky fetch with backoff", IntentRecord::Models::StakeholderSource.sole.title
+  end
+
   def test_rejects_reference_without_system
     result = run_cli("record", stdin: { "summary" => "s", "body" => "b",
                                         "stakeholder_references" => [{ "uri" => "https://x" }] })
