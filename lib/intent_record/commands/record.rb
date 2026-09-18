@@ -12,11 +12,11 @@ module IntentRecord
     class Record
       def call(input)
         summary = InputValidator.required_string!(input, "summary", max_length: Models::IntentRecord::SUMMARY_MAX_LENGTH)
-        body = InputValidator.required_string!(input, "body").strip
+        body = InputValidator.required_string!(input, "body")
         author = InputValidator.optional_string!(input, "author")
 
         ActiveRecord::Base.transaction do
-          record = create_record(summary.strip.gsub(/\s+/, " "), body, author)
+          record = create_record(summary.gsub(/\s+/, " "), body, author)
           link_all(record, input)
           Formatter.full(record)
         end

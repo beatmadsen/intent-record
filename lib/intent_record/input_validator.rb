@@ -7,7 +7,9 @@ module IntentRecord
       value = input[key]
       raise ValidationError, "#{key} is required" if value.nil?
       raise ValidationError, "#{key} must be a string" unless value.is_a?(String)
-      raise ValidationError, "#{key} cannot be blank" if value.strip.empty?
+
+      value = value.strip
+      raise ValidationError, "#{key} cannot be blank" if value.empty?
       if max_length && value.length > max_length
         raise ValidationError,
               "#{key} must be #{max_length} characters or fewer"
@@ -21,7 +23,8 @@ module IntentRecord
       return nil if value.nil?
       raise ValidationError, "#{key} must be a string" unless value.is_a?(String)
 
-      value.strip.empty? ? nil : value
+      value = value.strip
+      value.empty? ? nil : value
     end
 
     def array!(input, key)
