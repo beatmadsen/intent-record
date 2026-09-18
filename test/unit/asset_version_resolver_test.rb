@@ -33,6 +33,12 @@ class AssetVersionResolverTest < Minitest::Test
     assert_raises(IntentRecord::NotFoundError) { resolve("%bcd") }
   end
 
+  def test_id_of_a_case_sensitive_vcs_does_not_match_a_differently_cased_id
+    seed("abc123", vcs: "perforce")
+
+    assert_raises(IntentRecord::NotFoundError) { resolve("ABC123", vcs: "perforce") }
+  end
+
   def test_vcs_filter_is_case_insensitive
     seed("123", vcs: "perforce")
 

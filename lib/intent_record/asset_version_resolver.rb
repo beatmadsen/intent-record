@@ -15,9 +15,12 @@ module IntentRecord
     end
 
     def call
-      exact = scope.find_by(external_id: @external_id) || scope.find_by(external_id: @external_id.downcase)
-      return exact if exact
+      scope.find_by(external_id: @external_id) || resolve_prefix
+    end
 
+    private
+
+    def resolve_prefix
       candidates = prefix_candidates
       raise NotFoundError, "Asset version not found: #{@external_id}" if candidates.empty?
       if candidates.size > 1
@@ -28,8 +31,6 @@ module IntentRecord
       candidates.first
     end
 
-    private
-
     def scope
       base = Models::AssetVersion.includes(:vcs_system).joins(:vcs_system)
       @vcs ? base.where(vcs_systems: { name: @vcs }) : base
@@ -39,7 +40,7 @@ module IntentRecord
       return [] if @external_id.length < MIN_PREFIX_LENGTH
 
       scope.where(vcs_systems: { name: AssetVersionNormalizer::HASH_BASED })
-           .where(LikePattern.prefix("asset_versions.external_id"), LikePattern.prefix_bind(@external_id.downcase))
+           .where(LikePattern.prefix("asset_versions.external_id"), LikePattern.prefix_bind(@external_id))
            .to_a
     end
   end
