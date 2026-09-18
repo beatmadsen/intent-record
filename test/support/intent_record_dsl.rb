@@ -33,6 +33,30 @@ module IntentRecordDsl
     Array(matching).each { |pattern| assert_match pattern, result.error_message }
   end
 
+  # intent_id is the public base58 handle and external_id is the commit hash the
+  # caller supplied. Any other key ending in _id is a row id from the database,
+  # which nothing outside it is allowed to see. Walks the whole response so the
+  # rule covers shapes nobody thought to check, including ones added later.
+  PUBLIC_ID_KEYS = %w[intent_id external_id].freeze
+
+  def assert_no_internal_ids(node, path = "response")
+    case node
+    when Hash
+      node.each do |key, value|
+        refute internal_id_key?(key), "#{path} exposes a database id as #{key.inspect}"
+        assert_no_internal_ids(value, "#{path}.#{key}")
+      end
+    when Array
+      node.each_with_index { |value, i| assert_no_internal_ids(value, "#{path}[#{i}]") }
+    end
+  end
+
+  def internal_id_key?(key)
+    return false if PUBLIC_ID_KEYS.include?(key)
+
+    key == "id" || key.end_with?("_id")
+  end
+
   def assert_global_id(value)
     assert_match BASE58_PATTERN, value.to_s, "expected a 7-character base58 id, got #{value.inspect}"
   end

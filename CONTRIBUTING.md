@@ -24,6 +24,12 @@ quick version for the edit loop, and a red there is a prompt to look rather than
 verdict, because a handful of mutants is a small enough sample that one equivalent
 mutant sinks the score.
 
+A `module_function` method is reported as having no coverage even when the suite
+exercises it thoroughly. `module_function` leaves behind a private instance copy
+that nothing calls, and that is the copy the lane measures; the callers use the
+singleton copy. Check by breaking the method and running the suite before
+believing the report.
+
 `lib/intent_record/web/routes` sits outside the lane. Sinatra captures a route's
 body when the module is registered, which happens before mutineer forks, so every
 mutant there is reported as surviving when no test could kill it; making the same

@@ -16,7 +16,7 @@ class RecordMinimalTest < Minitest::Test
   def test_output_contains_no_internal_ids
     json = run_cli_ok!("record", stdin: { "summary" => "s", "body" => "b" })
 
-    refute json.key?("id")
+    assert_no_internal_ids json
     assert_global_id json["intent_id"]
   end
 end
