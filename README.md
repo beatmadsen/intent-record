@@ -73,9 +73,9 @@ JSON in on stdin where input is needed, JSON out on stdout, exit code 0 on succe
 
 Options take either `--name value` or `--name=value`. Unknown options and stray arguments are rejected rather than ignored.
 
-`lookup` without `--vcs` searches every system and prefers an exact id match over a prefix match. Git commits must be full SHA-1 or SHA-256 hashes; they are stored lowercase. Prefix lookup applies to hash-based systems only (git, mercurial, fossil, sapling, pijul, darcs), so a Perforce changelist `1234` never matches `12345`. URIs are normalised (lowercase scheme and host, no trailing slash) and system names are lowercased and hyphenated, so `Jira` and `jira`, or a ticket URL with and without a trailing slash, are one source. A later non-blank `title` for a source replaces the stored one.
+`lookup` without `--vcs` searches every system and prefers an exact id match over a prefix match. The same id can exist in two systems, a Perforce changelist and a Subversion revision that happen to spell the same, and then the lookup reports the ambiguity instead of picking one, so pass `--vcs` to say which you meant. Git commits must be full SHA-1 or SHA-256 hashes; they are stored lowercase. Prefix lookup applies to hash-based systems only (git, mercurial, fossil, sapling, pijul, darcs), so a Perforce changelist `1234` never matches `12345`. URIs are normalised (lowercase scheme and host, no trailing slash) and system names are lowercased and hyphenated, so `Jira` and `jira`, or a ticket URL with and without a trailing slash, are one source. A later non-blank `title` for a source replaces the stored one.
 
-`record` and `attach` both return the full intent record.
+`record` and `attach` both return the full intent record. A record's commits, stakeholder references and related intents come back in the order they were attached.
 
 An intent can be recorded before the commit exists and linked with `attach` afterwards. This also covers rebases and squashes, where the same intent ends up on a new hash. One commit can carry several intents and one intent can span several commits.
 

@@ -6,10 +6,29 @@ Issues and pull requests are welcome at https://github.com/beatmadsen/intent-rec
 
 ```bash
 bin/setup          # bundle install
-bundle exec rake   # tests, then rubocop; both must pass
+bundle exec rake   # tests, then the chaos lane below, then rubocop; all three must pass
 ```
 
 Tests run in parallel with one temporary database per test, so nothing touches `~/.intent-record`.
+
+## The chaos lane
+
+```bash
+bundle exec rake test:chaos   # the suite again, with every unordered query answered backwards
+```
+
+A `SELECT` with no `ORDER BY` promises nothing about the order of its rows, and
+SQLite already answers some of them from an index rather than in insertion order.
+A test that asserts on such an order agrees with the query plan in force today and
+says nothing about the one an added index will produce tomorrow. This lane reverses
+the rows of every result whose query did not name an order, which is as legal an
+answer as the one SQLite gave, so an assertion that survives both lanes has pinned
+the order itself. It reverses rather than shuffles, so it decides the same thing on
+every run. See `test/support/unordered_rows.rb`.
+
+A test that fails only in this lane was relying on an order nothing promised it.
+The fix belongs in the query, which has to name the order, rather than in the
+assertion.
 
 ## Mutation testing
 
