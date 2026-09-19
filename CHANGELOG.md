@@ -6,6 +6,13 @@ Notable changes, one section per released version. The format follows
 
 ## Unreleased
 
+### Added
+
+- `backfill` recovers intent records from a history of commit messages, for repos that adopt the tool with years of history already behind them. Commits go in on stdin as JSON, a `--pattern` says what a ticket reference looks like and a `--uri-prefix` turns each match into a stakeholder source, so `lookup` and `by-source` answer for commits made long before adoption.
+- Each backfilled record says in its body that the reasoning behind the change was never recorded, which is what an agent looks for when deciding where to attach the real one.
+- Commits for one ticket are chained oldest to newest, so `show` on any of them walks back through the others. `--order` says which end of the history the input starts at, defaulting to the newest-first order `git log` prints.
+- `--dry-run` writes nothing and reports the sources it would create along with the commit subjects that matched nothing, which is how a pattern gets corrected before it writes anything.
+
 ## 1.0.0 - 2026-09-18
 
 First release.
