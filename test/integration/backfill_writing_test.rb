@@ -1,26 +1,13 @@
 require "test_helper"
 
-# What backfill writes, asked of the command rather than through the CLI. The
-# matching rules are ReferenceScanner's and the wording is BackfilledIntent's;
-# what is left here is which commits get a record and which are passed over.
+# Which commits backfill writes a record for, and what that record is linked
+# to. The matching rules are ReferenceScanner's, the wording is
+# BackfilledIntent's and the dry run's report is Inspection's.
 class BackfillWritingTest < Minitest::Test
   include DbTestSetup
+  include BackfillDsl
 
-  Backfill = IntentRecord::Commands::Backfill
   Intent = IntentRecord::Models::IntentRecord
-
-  RETRY_HASH = "8f3a1c2d9e4b5f60718293a4b5c6d7e8f9a0b1c2".freeze
-  TYPO_HASH = "0123456789abcdef0123456789abcdef01234567".freeze
-
-  def backfill(commits, **)
-    Backfill.scanning(system: "jira", pattern: 'ACME-\d+',
-                      uri_prefix: "https://acme.atlassian.net/browse/", **)
-            .call({ "commits" => commits })
-  end
-
-  def commit(hash: RETRY_HASH, message: "ACME-42 Retry flaky fetches", **rest)
-    { "commit" => hash, "message" => message }.merge(rest.transform_keys(&:to_s))
-  end
 
   def test_a_commit_naming_a_ticket_gets_a_record
     backfill([commit])
@@ -28,8 +15,10 @@ class BackfillWritingTest < Minitest::Test
     assert_equal 1, Intent.count
   end
 
+  # Not merely unlinked: an intent restating the commit message and naming no
+  # ticket adds nothing git does not already hold.
   def test_a_commit_naming_nothing_gets_no_record
-    backfill([commit(hash: TYPO_HASH, message: "Fix a typo")])
+    backfill([unmatched_commit])
 
     assert_equal 0, Intent.count
   end
@@ -43,11 +32,24 @@ class BackfillWritingTest < Minitest::Test
   def test_the_record_is_linked_to_the_ticket_the_message_named
     backfill([commit])
 
-    assert_equal "https://acme.atlassian.net/browse/ACME-42", Intent.sole.stakeholder_sources.sole.uri
+    assert_equal TICKET, Intent.sole.stakeholder_sources.sole.uri
   end
 
-  # Running it twice is how a person finds their second key convention, so it
-  # has to be cheap rather than doubling every record.
+  # The ticket is often only in the branch name, never in the message.
+  def test_a_ticket_named_only_in_the_ref_is_found
+    backfill([commit(message: "Retry flaky fetches", ref: "feature/ACME-42-retry")])
+
+    assert_equal TICKET, Intent.sole.stakeholder_sources.sole.uri
+  end
+
+  def test_the_commit_author_is_carried_onto_the_record
+    backfill([commit(author: "Dana")])
+
+    assert_equal "Dana", Intent.sole.author
+  end
+
+  # Running it again is how a person adds the convention they missed, so it has
+  # to be cheap rather than doubling every record.
   def test_running_it_again_writes_nothing_further
     backfill([commit])
     backfill([commit])
@@ -55,17 +57,16 @@ class BackfillWritingTest < Minitest::Test
     assert_equal 1, Intent.count
   end
 
-  def test_it_reports_what_it_created_and_passed_over
-    report = backfill([commit, commit(hash: TYPO_HASH, message: "Fix a typo")])
-
-    assert_equal({ "created" => 1, "skipped" => 1, "failed" => 0 }, report.slice("created", "skipped", "failed"))
-  end
-
   def test_a_commit_that_already_has_an_intent_is_reported_as_skipped
     backfill([commit])
-    report = backfill([commit])
 
-    assert_equal 1, report["skipped"]
+    assert_equal 1, backfill([commit])["skipped"]
+  end
+
+  def test_it_reports_what_it_created_and_passed_over
+    report = backfill([commit, unmatched_commit])
+
+    assert_equal({ "created" => 1, "skipped" => 1, "failed" => 0 }, report.slice("created", "skipped", "failed"))
   end
 
   # One malformed hash in a history of thousands must not cost the whole run.
@@ -77,200 +78,15 @@ class BackfillWritingTest < Minitest::Test
   end
 
   def test_a_failed_commit_is_named_with_its_reason
-    report = backfill([commit(hash: "not-a-hash")])
+    failure = backfill([commit(hash: "not-a-hash")])["failures"].sole
 
-    failure = report["failures"].sole
     assert_equal "not-a-hash", failure["commit"]
     assert_match(/hex/, failure["error"])
-  end
-
-  # A dry run is how someone checks their regex before it writes anything.
-  def test_a_dry_run_reports_what_it_would_do_and_writes_nothing
-    report = backfill([commit], dry_run: true)
-
-    assert_equal 1, report["created"]
-    assert_equal 0, Intent.count
-  end
-
-  # The regex is never right the first time. Seeing which subjects matched
-  # nothing is how a person finds the second convention their team used, so a
-  # dry run shows them rather than only counting them.
-  def test_a_dry_run_shows_the_subjects_that_matched_nothing
-    report = backfill([commit, commit(hash: TYPO_HASH, message: "Fix a typo\n\nbody")], dry_run: true)
-
-    assert_equal ["Fix a typo"], report["unmatched"]
-  end
-
-  def test_a_dry_run_shows_the_sources_it_would_create
-    report = backfill([commit], dry_run: true)
-
-    assert_equal ["https://acme.atlassian.net/browse/ACME-42"], report["sources"]
-  end
-
-  # A commit that already has a record matched the pattern, so it is not an
-  # example of the pattern missing and must not be offered as one.
-  def test_an_already_recorded_commit_is_not_listed_as_unmatched
-    backfill([commit])
-    report = backfill([commit], dry_run: true)
-
-    assert_empty report["unmatched"]
-  end
-
-  # A dry run reporting a source it would not in fact create would send someone
-  # looking for a row that never appears.
-  def test_a_dry_run_does_not_offer_sources_for_commits_it_would_skip
-    backfill([commit])
-    report = backfill([commit], dry_run: true)
-
-    assert_empty report["sources"]
-  end
-
-  # A commit with no message has no subject to show, and a list of blank lines
-  # tells a reader nothing about what their pattern missed.
-  def test_a_commit_with_no_message_is_counted_but_not_listed_as_unmatched
-    report = backfill([commit(hash: TYPO_HASH, message: "   ")], dry_run: true)
-
-    assert_equal 1, report["skipped"]
-    assert_empty report["unmatched"]
-  end
-
-  # The counts of a dry run and of a write run look identical, so the result has
-  # to say which one it was or a caller cannot tell whether anything was
-  # written.
-  def test_a_dry_run_says_it_was_one
-    assert_equal true, backfill([commit], dry_run: true)["dry_run"]
-  end
-
-  def test_a_write_run_does_not_claim_to_be_a_dry_run
-    refute backfill([commit])["dry_run"]
-  end
-
-  # The report is of the run it describes, not of everything the object has
-  # ever seen. The CLI builds a fresh command per invocation, so nothing today
-  # notices, but a report that depends on who held the object before is a trap
-  # for the next caller.
-  def test_a_second_call_reports_only_that_call
-    cmd = dry_run_command
-    payload = two_unmatched_and_one_hit
-
-    # Copied, because a report handing back the command's own array would
-    # compare equal to itself however much the second call added to it.
-    first = cmd.call(payload).transform_values(&:dup)
-
-    assert_equal first, cmd.call(payload)
-  end
-
-  def dry_run_command
-    Backfill.scanning(system: "jira", pattern: 'ACME-\d+',
-                      uri_prefix: "https://acme.atlassian.net/browse/", dry_run: true)
-  end
-
-  # Two unmatched, because one duplicated in a doubled list still reads as one
-  # entry once the cap and the dedupe have had it.
-  def two_unmatched_and_one_hit
-    { "commits" => [commit,
-                    commit(hash: TYPO_HASH, message: "no key here"),
-                    commit(hash: SECOND_HASH, message: "nor here")] }
-  end
-
-  # A write run is not an inspection, and the list would drown the result.
-  def test_a_write_run_does_not_carry_the_unmatched_list
-    report = backfill([commit(hash: TYPO_HASH, message: "Fix a typo")])
-
-    refute report.key?("unmatched")
-  end
-
-  def test_the_commit_author_is_carried_onto_the_record
-    backfill([commit(author: "Dana")])
-
-    assert_equal "Dana", Intent.sole.author
-  end
-
-  # Successive commits for one ticket are almost always a chain, and linking
-  # them is what makes `show` on any one of them tell the story rather than
-  # present an isolated record.
-  SECOND_HASH = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e".freeze
-
-  def test_the_next_commit_for_a_ticket_links_back_to_the_one_before
-    backfill([commit, commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout")],
-             order: "oldest-first")
-
-    second = Intent.find_by!(summary: "ACME-42 Raise the timeout")
-    assert_equal(["ACME-42 Retry flaky fetches"], second.outgoing_links.map { |l| l.target.summary })
-  end
-
-  def test_the_first_commit_for_a_ticket_links_to_nothing
-    backfill([commit, commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout")],
-             order: "oldest-first")
-
-    first = Intent.find_by!(summary: "ACME-42 Retry flaky fetches")
-    assert_empty first.outgoing_links
-  end
-
-  # The most recent one only. With two commits the newest and the oldest
-  # predecessor are the same record, so the rule needs a third to be visible at
-  # all: the last of three must link to the second, never back to the first.
-  THIRD_HASH = "fedcba9876543210fedcba9876543210fedcba98".freeze
-
-  def test_a_third_commit_links_to_the_second_rather_than_the_first
-    backfill([commit,
-              commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout"),
-              commit(hash: THIRD_HASH, message: "ACME-42 Log the retries")],
-             order: "oldest-first")
-
-    third = Intent.find_by!(summary: "ACME-42 Log the retries")
-    assert_equal(["ACME-42 Raise the timeout"], third.outgoing_links.map { |l| l.target.summary })
-  end
-
-  # `git log` prints newest first, which is what a person actually pipes in, and
-  # the chain must still run oldest to newest: the later commit builds on the
-  # earlier one, never the reverse. Fed in that order the naive link points
-  # backwards, which is what this pins.
-  def test_a_history_given_newest_first_still_chains_oldest_to_newest
-    backfill([commit(hash: THIRD_HASH, message: "ACME-42 Log the retries"),
-              commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout"),
-              commit])
-
-    third = Intent.find_by!(summary: "ACME-42 Log the retries")
-    second = Intent.find_by!(summary: "ACME-42 Raise the timeout")
-    assert_equal(["ACME-42 Raise the timeout"], third.outgoing_links.map { |l| l.target.summary })
-    assert_equal(["ACME-42 Retry flaky fetches"], second.outgoing_links.map { |l| l.target.summary })
-  end
-
-  def test_the_oldest_commit_of_a_newest_first_history_links_to_nothing
-    backfill([commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout"), commit])
-
-    assert_empty Intent.find_by!(summary: "ACME-42 Retry flaky fetches").outgoing_links
-  end
-
-  # Two tickets are two chains. Linking across them would assert a relationship
-  # nothing in the history supports.
-  def test_commits_for_different_tickets_are_not_linked_to_each_other
-    backfill([commit, commit(hash: SECOND_HASH, message: "ACME-99 Something else")])
-
-    other = Intent.find_by!(summary: "ACME-99 Something else")
-    assert_empty other.outgoing_links
-  end
-
-  # A second run continues the chain rather than starting a new one.
-  def test_a_later_run_links_onto_the_chain_the_earlier_run_left
-    backfill([commit])
-    backfill([commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout")])
-
-    second = Intent.find_by!(summary: "ACME-42 Raise the timeout")
-    assert_equal(["ACME-42 Retry flaky fetches"], second.outgoing_links.map { |l| l.target.summary })
   end
 
   def test_an_order_it_does_not_know_is_refused
     error = assert_raises(IntentRecord::ValidationError) { backfill([commit], order: "sideways") }
 
     assert_match(/order/, error.message)
-  end
-
-  # The ticket is often only in the branch name, never in the message.
-  def test_a_ticket_named_only_in_the_ref_is_found
-    backfill([commit(message: "Retry flaky fetches", ref: "feature/ACME-42-retry")])
-
-    assert_equal "https://acme.atlassian.net/browse/ACME-42", Intent.sole.stakeholder_sources.sole.uri
   end
 end

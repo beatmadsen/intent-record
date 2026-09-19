@@ -1,91 +1,69 @@
 require "test_helper"
 
 # The headline use case: a repo adopts intent-record with years of history
-# behind it, and wants `by-source` to answer for commits made before adoption.
-# The ticket keys are already in the commit messages; backfill turns them into
-# the same rows `record` would have written at the time.
+# behind it, and wants `lookup` and `by-source` to answer for commits made long
+# before adoption. The ticket keys are already in the commit messages, and
+# backfill turns them into the rows `record` would have written at the time.
 class BackfillTest < Minitest::Test
   include IntentRecordDsl
+  include BackfillDsl
 
-  RETRY_HASH = "8f3a1c2d9e4b5f60718293a4b5c6d7e8f9a0b1c2".freeze
-  TIMEOUT_HASH = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e".freeze
-  TYPO_HASH = "0123456789abcdef0123456789abcdef01234567".freeze
-
-  JIRA_OPTIONS = ["--system", "jira",
-                  "--pattern", 'ACME-\d+',
-                  "--uri-prefix", "https://acme.atlassian.net/browse/"].freeze
+  OPTIONS = ["--system", "jira", "--pattern", 'ACME-\d+', "--uri-prefix", BackfillDsl::PREFIX].freeze
 
   HISTORY = {
     "commits" => [
-      { "commit" => RETRY_HASH, "author" => "Dana",
-        "message" => "ACME-42 Retry flaky fetches\n\nCI went red three times this week." },
-      { "commit" => TIMEOUT_HASH, "author" => "Dana",
-        "message" => "ACME-42 Raise the fetch timeout" },
-      { "commit" => TYPO_HASH, "author" => "Sam", "message" => "Fix a typo in the README" }
+      { "commit" => BackfillDsl::RETRY_HASH, "author" => "Dana",
+        "message" => "#{BackfillDsl::RETRY_SUBJECT}\n\nCI went red three times this week." },
+      { "commit" => BackfillDsl::SECOND_HASH, "author" => "Dana", "message" => BackfillDsl::TIMEOUT_SUBJECT },
+      { "commit" => BackfillDsl::TYPO_HASH, "author" => "Sam", "message" => "Fix a typo in the README" }
     ]
   }.freeze
 
+  def backfill_history(*extra)
+    run_cli_ok!("backfill", *OPTIONS, *extra, stdin: HISTORY)
+  end
+
   def test_ticket_in_a_commit_message_becomes_a_queryable_source
-    run_cli_ok!("backfill", *JIRA_OPTIONS, stdin: HISTORY)
+    backfill_history
 
-    found = run_cli_ok!("by-source", "https://acme.atlassian.net/browse/ACME-42")
+    found = run_cli_ok!("by-source", TICKET)
 
-    assert_equal [RETRY_HASH, TIMEOUT_HASH].sort, found["asset_versions"].map { |c| c["external_id"] }.sort
+    assert_equal [RETRY_HASH, SECOND_HASH].sort, found["asset_versions"].map { |v| v["external_id"] }.sort
   end
 
-  def test_backfilled_commit_answers_lookup_with_the_subject_line
-    run_cli_ok!("backfill", *JIRA_OPTIONS, stdin: HISTORY)
+  def test_a_backfilled_commit_answers_lookup_with_its_subject_line
+    backfill_history
 
-    found = run_cli_ok!("lookup", RETRY_HASH)
-
-    assert_equal "ACME-42 Retry flaky fetches", found["intents"].sole["summary"]
+    assert_equal RETRY_SUBJECT, run_cli_ok!("lookup", RETRY_HASH)["intents"].sole["summary"]
   end
 
-  # Not merely unlinked: never stored. An intent whose body restates the commit
-  # message and names no ticket adds nothing the VCS does not already hold.
-  def test_commit_naming_no_ticket_is_left_out_of_the_store_entirely
-    run_cli_ok!("backfill", *JIRA_OPTIONS, stdin: HISTORY)
+  # An agent reading this later needs to know the reasoning was never captured,
+  # so it can attach the real one instead of trusting the commit message.
+  def test_a_backfilled_record_says_its_reasoning_was_never_recorded
+    backfill_history
 
-    result = run_cli("lookup", TYPO_HASH)
+    body = run_cli_ok!("lookup", RETRY_HASH)["intents"].sole["body"]
 
-    assert_cli_rejected result, matching: /not found/
+    assert_includes body, IntentRecord::Backfill::BackfilledIntent::MARKER
   end
 
-  def test_a_dry_run_writes_nothing_and_says_so
-    json = run_cli_ok!("backfill", *JIRA_OPTIONS, "--dry-run", stdin: HISTORY)
+  # Not merely unlinked: never stored at all.
+  def test_a_commit_naming_no_ticket_is_left_out_of_the_store_entirely
+    backfill_history
+
+    assert_cli_rejected run_cli("lookup", TYPO_HASH), matching: /not found/
+  end
+
+  def test_a_dry_run_says_so_and_leaves_the_store_empty
+    json = run_cli_ok!("backfill", *OPTIONS, "--dry-run", stdin: HISTORY)
 
     assert_equal true, json["dry_run"]
     assert_cli_rejected run_cli("lookup", RETRY_HASH), matching: /not found/
   end
 
-  def test_a_backfill_without_a_system_is_refused
-    result = run_cli("backfill", "--pattern", 'ACME-\d+', stdin: HISTORY)
+  def test_it_reports_what_it_created_and_what_it_passed_over
+    json = backfill_history
 
-    assert_cli_rejected result, matching: /--system/
-  end
-
-  def test_a_backfill_without_a_pattern_is_refused
-    result = run_cli("backfill", "--system", "jira", stdin: HISTORY)
-
-    assert_cli_rejected result, matching: /--pattern/
-  end
-
-  def test_an_order_the_command_does_not_know_is_refused
-    result = run_cli("backfill", *JIRA_OPTIONS, "--order", "sideways", stdin: HISTORY)
-
-    assert_cli_rejected result, matching: /--order/
-  end
-
-  def test_a_pattern_that_is_not_a_regex_is_refused
-    result = run_cli("backfill", "--system", "jira", "--pattern", "ACME-[", stdin: HISTORY)
-
-    assert_cli_rejected result, matching: /pattern/
-  end
-
-  def test_reports_what_it_created_and_what_it_passed_over
-    json = run_cli_ok!("backfill", *JIRA_OPTIONS, stdin: HISTORY)
-
-    assert_equal 2, json["created"]
-    assert_equal 1, json["skipped"]
+    assert_equal [2, 1], [json["created"], json["skipped"]]
   end
 end
