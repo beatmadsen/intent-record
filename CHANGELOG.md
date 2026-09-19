@@ -6,13 +6,15 @@ Notable changes, one section per released version. The format follows
 
 ## Unreleased
 
+## 1.1.0 - 2026-09-19
+
 ### Added
 
-- `backfill` recovers intent records from a history of commit messages, for repos that adopt the tool with years of history already behind them. Commits go in on stdin as JSON, a `--pattern` says what a ticket reference looks like and a `--uri-prefix` turns each match into a stakeholder source, so `lookup` and `by-source` answer for commits made long before adoption.
-- Each backfilled record says in its body that the reasoning behind the change was never recorded, which is what an agent looks for when deciding where to attach the real one.
-- Commits for one ticket are chained oldest to newest, so `show` on any of them walks back through the others. `--order` says which end of the history the input starts at, defaulting to the newest-first order `git log` prints.
-- A commit recorded by an earlier pass keeps its record and gains the references a later pass finds, so a history using two conventions ends up linked to both. Those commits are reported as `linked` rather than `created`, and a pass that finds nothing new writes nothing.
-- `--dry-run` writes nothing and reports the sources it would create along with the commit subjects that matched nothing, which is how a pattern gets corrected before it writes anything.
+- `backfill`, which recovers intent records from a repository's commit history. Commits go in on stdin as JSON, `--pattern` says what a ticket reference looks like and `--uri-prefix` turns each match into a stakeholder source. Afterwards `lookup` and `by-source` answer for commits made before the tool was adopted.
+- A backfilled record says in its body that the reasoning was never recorded, so an agent can tell where the real reasoning still needs attaching.
+- Commits for one ticket are chained oldest to newest. `--order` says which end of the input is the old end and defaults to newest-first, the order `git log` prints.
+- A later pass with a different pattern adds its references to the records an earlier pass created and reports them as `linked`. A pass that finds nothing new writes nothing.
+- `--dry-run` writes nothing and reports the sources it would create and the commit subjects nothing matched.
 
 ## 1.0.0 - 2026-09-18
 

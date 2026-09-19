@@ -93,7 +93,7 @@ An intent can be recorded before the commit exists and linked with `attach` afte
 
 A repo that adopts intent-record already has years of history, and `lookup` and `by-source` answer nothing for any of it. That history is usually exactly what someone needs when they open unfamiliar code. The ticket keys are already in the commit messages, so `backfill` reads them and writes the rows `record` would have written at the time.
 
-It recovers the graph, not the reasoning. A commit message says what changed; only the person who made the change knew why. Every backfilled record says so in its body, which leaves the agent that next touches that code somewhere to attach the real reasoning.
+It recovers the graph, not the reasoning. A commit message says what changed, and only the person who made the change knew why. Every backfilled record says so in its body, so an agent that later touches that code knows the real reasoning is still to be attached.
 
 Commits go in on stdin as JSON, so the tool never shells out to git and the same command works for Perforce or Mercurial:
 
@@ -112,7 +112,7 @@ intent-record backfill --system jira \
   --dry-run < history.json
 ```
 
-Start with `--dry-run`. It writes nothing and reports the sources it would create along with the first twenty commit subjects that matched nothing, which is how you find the second convention your team used before you write anything:
+Start with `--dry-run`. It writes nothing, and it reports the sources it would create and the first twenty commit subjects nothing matched, which is how you find the second convention your team used before anything is written:
 
 ```json
 {"created": 128, "linked": 0, "skipped": 41, "failed": 0, "dry_run": true,
@@ -146,7 +146,7 @@ A capture group narrows what gets appended to the prefix. `ACME-\d+` with prefix
 
 A pattern matches anywhere in the message, including inside another key. `#(\d+)` finds the `77` in an Azure `AB#77` and links it to GitHub issue 77, which is a different thing entirely. Where a history mixes conventions, anchor the loose one: `(?<![A-Za-z])#(\d+)` matches `closes #123` and `fix (#42)` while leaving `AB#77` alone.
 
-Patterns are case-sensitive, and so are the uris they build. A history that writes `ACME-42` in some commits and `acme-42` in others gives you two sources unless the pattern normalises the case for you. `(?i)acme-\d+` matches both but still builds a uri from whatever each commit wrote, so match the case you want with the pattern itself and run a second pass for the stragglers.
+Patterns are case-sensitive, and so are the uris they build. A history that writes `ACME-42` in some commits and `acme-42` in others gives you two sources. `(?i)acme-\d+` matches both, but each uri is still built from what the commit wrote, so the two are not merged.
 
 There is no default pattern per system, because Jira and Linear keys look alike and only you know which one `ABC-123` means.
 
@@ -194,7 +194,7 @@ Related-intent links may form cycles; the store records what it is told and leav
 
 ## Agent integration
 
-Any agent that can run a process and read stdout can use it. Record after each commit, `lookup` before touching unfamiliar code, `by-source` when picking up a ticket that has history.
+Any agent that can run a process and read stdout can use it. Record after each commit, `lookup` before touching unfamiliar code, `by-source` when picking up a ticket that has history, and `backfill` once when adopting the tool on a repository that already has history.
 
 For Claude Code there is a skill that says when to do each of those and what a usable `body` contains: [intent-record](https://github.com/beatmadsen/claude-skills/tree/main/skills/intent-record), in the [beatmadsen/claude-skills](https://github.com/beatmadsen/claude-skills) collection. Install it for every project you work on:
 
