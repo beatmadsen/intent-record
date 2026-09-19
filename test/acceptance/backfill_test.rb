@@ -51,6 +51,37 @@ class BackfillTest < Minitest::Test
     assert_cli_rejected result, matching: /not found/
   end
 
+  def test_a_dry_run_writes_nothing_and_says_so
+    json = run_cli_ok!("backfill", *JIRA_OPTIONS, "--dry-run", stdin: HISTORY)
+
+    assert_equal true, json["dry_run"]
+    assert_cli_rejected run_cli("lookup", RETRY_HASH), matching: /not found/
+  end
+
+  def test_a_backfill_without_a_system_is_refused
+    result = run_cli("backfill", "--pattern", 'ACME-\d+', stdin: HISTORY)
+
+    assert_cli_rejected result, matching: /--system/
+  end
+
+  def test_a_backfill_without_a_pattern_is_refused
+    result = run_cli("backfill", "--system", "jira", stdin: HISTORY)
+
+    assert_cli_rejected result, matching: /--pattern/
+  end
+
+  def test_an_order_the_command_does_not_know_is_refused
+    result = run_cli("backfill", *JIRA_OPTIONS, "--order", "sideways", stdin: HISTORY)
+
+    assert_cli_rejected result, matching: /--order/
+  end
+
+  def test_a_pattern_that_is_not_a_regex_is_refused
+    result = run_cli("backfill", "--system", "jira", "--pattern", "ACME-[", stdin: HISTORY)
+
+    assert_cli_rejected result, matching: /pattern/
+  end
+
   def test_reports_what_it_created_and_what_it_passed_over
     json = run_cli_ok!("backfill", *JIRA_OPTIONS, stdin: HISTORY)
 
