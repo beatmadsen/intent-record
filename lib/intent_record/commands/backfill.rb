@@ -44,13 +44,15 @@ module IntentRecord
         @scanner = scanner
         @dry_run = dry_run
         @order = validated_order(order)
-        @unmatched = []
-        @sources = []
       end
 
+      # What a dry run saw is gathered per call rather than on the instance, so
+      # a second call reports that call and the report never hands back an array
+      # the command goes on writing to.
       def call(input)
         specs = chronological(IntentRecord::Backfill::CommitSpecs.from(input))
-        report(specs.map { |spec| process(spec) })
+        seen = Inspection.new(@dry_run)
+        report(specs.map { |spec| process(spec, seen) }, seen)
       end
 
       private
@@ -69,33 +71,15 @@ module IntentRecord
         @order == DEFAULT_ORDER ? specs.reverse : specs
       end
 
-      def process(spec)
+      def process(spec, seen)
         references = @scanner.call(searchable(spec))
-        return unmatched(spec) if references.empty?
+        return seen.missed(subject(spec)) if references.empty?
         return :skipped if already_recorded?(spec[:commit])
 
-        noted(references)
+        seen.noted(references)
         @dry_run ? :created : write!(spec, references)
       rescue Error => e
         { commit: spec[:commit], error: e.message }
-      end
-
-      # The pattern is never right the first time, and seeing which subjects
-      # matched nothing is how a person finds the second convention their team
-      # used. Only a dry run reports them: a write run is not an inspection.
-      def unmatched(spec)
-        @unmatched << subject(spec) if listable?(spec)
-        :skipped
-      end
-
-      # A commit with no message has no subject to show, and a list of blank
-      # lines says nothing about what the pattern missed.
-      def listable?(spec)
-        @dry_run && @unmatched.size < UNMATCHED_SHOWN && !subject(spec).empty?
-      end
-
-      def noted(references)
-        @sources.concat(references.map { |r| r["uri"] }) if @dry_run
       end
 
       def subject(spec)
@@ -160,8 +144,8 @@ module IntentRecord
         AssetVersionNormalizer.lookup_id("git", commit)
       end
 
-      def report(outcomes)
-        counts(outcomes).merge(@dry_run ? inspection : {})
+      def report(outcomes, seen)
+        counts(outcomes).merge(seen.to_h)
       end
 
       def counts(outcomes)
@@ -172,11 +156,44 @@ module IntentRecord
           "failures" => failures.map { |f| { "commit" => f[:commit], "error" => f[:error] } } }
       end
 
-      # What a dry run is for: the sources it would create, so they can be
+      # What one dry run saw: the sources it would create, so they can be
       # eyeballed, and the subjects that matched nothing, so the pattern that
-      # missed them can be written.
-      def inspection
-        { "dry_run" => true, "sources" => @sources.uniq, "unmatched" => @unmatched }
+      # missed them can be written. A write run gathers neither, and reports
+      # neither, because it is not an inspection.
+      class Inspection
+        def initialize(collecting)
+          @collecting = collecting
+          @sources = []
+          @unmatched = []
+        end
+
+        # The pattern is never right the first time, and seeing which subjects
+        # matched nothing is how a person finds the second convention their
+        # team used.
+        def missed(subject)
+          @unmatched << subject if listable?(subject)
+          :skipped
+        end
+
+        def noted(references)
+          @sources.concat(references.map { |r| r["uri"] }) if @collecting
+        end
+
+        # Each call builds its own Inspection, so these arrays are this call's
+        # and copying them again would protect nothing.
+        def to_h
+          return {} unless @collecting
+
+          { "dry_run" => true, "sources" => @sources.uniq, "unmatched" => @unmatched }
+        end
+
+        private
+
+        # A commit with no message has no subject to show, and a list of blank
+        # lines says nothing about what the pattern missed.
+        def listable?(subject)
+          @collecting && @unmatched.size < UNMATCHED_SHOWN && !subject.empty?
+        end
       end
     end
   end

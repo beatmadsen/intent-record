@@ -153,6 +153,34 @@ class BackfillWritingTest < Minitest::Test
     refute backfill([commit])["dry_run"]
   end
 
+  # The report is of the run it describes, not of everything the object has
+  # ever seen. The CLI builds a fresh command per invocation, so nothing today
+  # notices, but a report that depends on who held the object before is a trap
+  # for the next caller.
+  def test_a_second_call_reports_only_that_call
+    cmd = dry_run_command
+    payload = two_unmatched_and_one_hit
+
+    # Copied, because a report handing back the command's own array would
+    # compare equal to itself however much the second call added to it.
+    first = cmd.call(payload).transform_values(&:dup)
+
+    assert_equal first, cmd.call(payload)
+  end
+
+  def dry_run_command
+    Backfill.scanning(system: "jira", pattern: 'ACME-\d+',
+                      uri_prefix: "https://acme.atlassian.net/browse/", dry_run: true)
+  end
+
+  # Two unmatched, because one duplicated in a doubled list still reads as one
+  # entry once the cap and the dedupe have had it.
+  def two_unmatched_and_one_hit
+    { "commits" => [commit,
+                    commit(hash: TYPO_HASH, message: "no key here"),
+                    commit(hash: SECOND_HASH, message: "nor here")] }
+  end
+
   # A write run is not an inspection, and the list would drown the result.
   def test_a_write_run_does_not_carry_the_unmatched_list
     report = backfill([commit(hash: TYPO_HASH, message: "Fix a typo")])
