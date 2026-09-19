@@ -16,11 +16,9 @@ module IntentRecord
         @uri_prefix = uri_prefix.to_s
       end
 
-      # A message naming the same ticket twice, as merge commits do, asks for one
-      # source and not two. Keyed on the uri, because that is what makes a source
-      # the same source downstream.
       def call(message)
-        matching { matches(message) }.uniq { |m| m[:uri] }.map { |m| reference(m) }
+        found = matching { matches(message) }
+        distinct(found).map { |m| reference(m) }
       end
 
       # Ruby's engine memoises its way out of the catastrophic patterns anyone
@@ -37,6 +35,13 @@ module IntentRecord
       end
 
       private
+
+      # A message naming the same ticket twice, as merge commits do, asks for
+      # one source and not two. Keyed on the uri, because that is what makes a
+      # source the same source downstream.
+      def distinct(found)
+        found.uniq { |m| m[:uri] }
+      end
 
       def compiled(pattern)
         Regexp.new(pattern, timeout: MATCH_TIMEOUT_SECONDS)
