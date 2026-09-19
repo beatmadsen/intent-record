@@ -84,10 +84,14 @@ class ReferenceScannerTest < Minitest::Test
   # pattern; it is the whole of the guard on an engine that gives up, and the
   # part that would regress in silence.
   def test_the_pattern_is_compiled_with_a_match_timeout
-    given = nil
-    Regexp.stub(:new, ->(source, **options) { given = options[:timeout]; /#{source}/ }) { scanner }
+    budgets = []
+    recording = lambda do |source, **options|
+      budgets << options[:timeout]
+      /#{source}/
+    end
+    Regexp.stub(:new, recording) { scanner }
 
-    assert_equal Scanner::MATCH_TIMEOUT_SECONDS, given
+    assert_equal [Scanner::MATCH_TIMEOUT_SECONDS], budgets
   end
 
   # And that a timeout, however it arises, is reported as a pattern problem

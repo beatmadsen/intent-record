@@ -73,9 +73,8 @@ machine with many cores. Keep the guard in place when changing the test helper.
 
 - Add a failing test before the fix or feature, then make it pass.
 - Keep the CLI contract: JSON in, JSON out, exit 1 with `{"error": ...}` on failure, no internal ids in output.
-- The changelog records the difference between released versions. Nothing is released yet, so
-  `Unreleased` stays empty; once there is a published version to compare against, add a line
-  there for anything a user of the gem would notice.
+- The changelog records the difference between released versions. Add a line under
+  `Unreleased` for anything a user of the gem would notice.
 
 ## Releasing
 

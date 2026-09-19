@@ -84,6 +84,18 @@ class BackfillWritingTest < Minitest::Test
     assert_match(/hex/, failure["error"])
   end
 
+  # The README tells people to run a second pass for the convention the first
+  # pattern missed. A commit found by both passes must not gain a second
+  # record, and the sources are one per uri however they were found.
+  def test_a_second_pass_with_another_pattern_adds_only_what_the_first_missed
+    backfill([commit])
+    second = IntentRecord::Commands::Backfill.scanning(system: "jira", pattern: 'acme-\d+', uri_prefix: PREFIX)
+    second.call({ "commits" => [commit(hash: SECOND_HASH, message: "acme-42 lowercase key")] })
+
+    assert_equal 2, Intent.count
+    assert_equal 2, IntentRecord::Models::StakeholderSource.count
+  end
+
   def test_an_order_it_does_not_know_is_refused
     error = assert_raises(IntentRecord::ValidationError) { backfill([commit], order: "sideways") }
 
