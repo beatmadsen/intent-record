@@ -96,6 +96,38 @@ class BackfillWritingTest < Minitest::Test
     assert_equal 2, IntentRecord::Models::StakeholderSource.count
   end
 
+  # A second pass for another convention must link what it finds, not walk
+  # past the commit because an earlier pass got there first. Skipping whole
+  # commits silently loses every reference the first pattern did not match.
+  def test_a_second_pass_links_its_references_to_the_record_that_exists
+    backfill([commit(message: "ACME-42 and GH-7 together")])
+    second = IntentRecord::Commands::Backfill.scanning(system: "github-issues", pattern: 'GH-\d+',
+                                                       uri_prefix: "https://gh.test/issues/")
+    second.call({ "commits" => [commit(message: "ACME-42 and GH-7 together")] })
+
+    assert_equal 1, Intent.count
+    assert_equal ["https://acme.atlassian.net/browse/ACME-42", "https://gh.test/issues/GH-7"],
+                 Intent.sole.stakeholder_sources.map(&:uri).sort
+  end
+
+  def test_a_second_pass_reports_the_commit_it_added_links_to
+    backfill([commit(message: "ACME-42 and GH-7 together")])
+    second = IntentRecord::Commands::Backfill.scanning(system: "github-issues", pattern: 'GH-\d+',
+                                                       uri_prefix: "https://gh.test/issues/")
+    report = second.call({ "commits" => [commit(message: "ACME-42 and GH-7 together")] })
+
+    assert_equal 1, report["linked"]
+    assert_equal 0, report["created"]
+  end
+
+  # Running the same pass twice must still add nothing the second time.
+  def test_repeating_one_pass_adds_no_further_links
+    backfill([commit])
+    backfill([commit])
+
+    assert_equal 1, Intent.sole.stakeholder_sources.count
+  end
+
   def test_an_order_it_does_not_know_is_refused
     error = assert_raises(IntentRecord::ValidationError) { backfill([commit], order: "sideways") }
 

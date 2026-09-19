@@ -44,9 +44,19 @@ class BackfillDryRunTest < Minitest::Test
     assert_empty dry_run([commit])["unmatched"]
   end
 
-  # Offering a source it would not in fact create sends someone looking for a
-  # row that never appears.
-  def test_a_dry_run_does_not_offer_sources_for_commits_it_would_skip
+  # A commit already recorded now gains links rather than being passed over, so
+  # a dry run counts it as linked and not as created.
+  def test_a_dry_run_counts_an_already_recorded_commit_as_nothing_to_do
+    backfill([commit])
+    report = dry_run([commit])
+
+    assert_equal 0, report["created"]
+    assert_equal 1, report["skipped"]
+  end
+
+  # The source exists already, so offering it as one this run would create
+  # sends someone looking for a row that is not new.
+  def test_a_dry_run_does_not_offer_sources_that_are_already_linked
     backfill([commit])
 
     assert_empty dry_run([commit])["sources"]
