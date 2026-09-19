@@ -14,6 +14,7 @@ class UnknownArgvTest < Minitest::Test
   # that what it reports is the unknown option rather than a missing argument.
   ARGUMENTS = {
     "attach" => %w[zzzzzzz],
+    "backfill" => ["--system", "jira", "--pattern", "ACME-\\d+"],
     "by-source" => %w[https://example.test/1],
     "lookup" => [HASH],
     "recent" => [],

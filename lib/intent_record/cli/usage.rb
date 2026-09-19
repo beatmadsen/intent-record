@@ -12,12 +12,22 @@ module IntentRecord
         by-source <uri> [--contains]    Intents linked to a stakeholder uri (Jira ticket, Confluence page, ...)
         recent [--limit N]              Newest intents first
         systems                         Known vcs and stakeholder system names
+        backfill [options]              Recover intents from commit messages (JSON via stdin, see below)
         serve [--port N]                Start the local web GUI
 
       Options:
         --config-dir <dir>              Use the store in this directory instead of ~/.intent-record
         --help, -h                      Show this help
         --version                       Show version
+
+      backfill options and input:
+        --system <name>                 Stakeholder system the found references belong to (required)
+        --pattern <regex>               What a reference looks like in a message (required).
+                                        A capture group narrows what is appended to the prefix
+        --uri-prefix <url>              Prefix + key = source uri. Without it the whole match is the uri
+        --dry-run                       Report what it would write, write nothing
+        {"commits": [{"commit": "<hash>", "message": "<commit message>",
+                      "author": "...", "ref": "<branch name>"}]}
 
       Input shape for record/attach (all keys optional except summary and body on record):
         {"summary": "...", "body": "...", "author": "...",

@@ -30,7 +30,7 @@ class BackfillTest < Minitest::Test
 
     found = run_cli_ok!("by-source", "https://acme.atlassian.net/browse/ACME-42")
 
-    assert_equal [RETRY_HASH, TIMEOUT_HASH].sort, found["commits"].map { |c| c["external_id"] }.sort
+    assert_equal [RETRY_HASH, TIMEOUT_HASH].sort, found["asset_versions"].map { |c| c["external_id"] }.sort
   end
 
   def test_backfilled_commit_answers_lookup_with_the_subject_line
@@ -41,12 +41,14 @@ class BackfillTest < Minitest::Test
     assert_equal "ACME-42 Retry flaky fetches", found["intents"].sole["summary"]
   end
 
-  def test_commit_naming_no_ticket_is_left_alone
+  # Not merely unlinked: never stored. An intent whose body restates the commit
+  # message and names no ticket adds nothing the VCS does not already hold.
+  def test_commit_naming_no_ticket_is_left_out_of_the_store_entirely
     run_cli_ok!("backfill", *JIRA_OPTIONS, stdin: HISTORY)
 
-    found = run_cli_ok!("lookup", TYPO_HASH)
+    result = run_cli("lookup", TYPO_HASH)
 
-    assert_empty found["intents"]
+    assert_cli_rejected result, matching: /not found/
   end
 
   def test_reports_what_it_created_and_what_it_passed_over

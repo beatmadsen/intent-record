@@ -10,6 +10,7 @@ require_relative "../commands/by_source"
 require_relative "../commands/recent"
 require_relative "../commands/attach"
 require_relative "../commands/systems"
+require_relative "../commands/backfill"
 
 module IntentRecord
   class CLI
@@ -67,6 +68,13 @@ module IntentRecord
         @parser.take_required_positional(label)
       end
 
+      def required_flag(name)
+        value = @parser.take_flag(name)
+        raise ValidationError, "#{name} is required" if value.nil? || value.strip.empty?
+
+        value
+      end
+
       def run_record
         finish! { Commands::Record.new.call(stdin_json) }
       end
@@ -101,6 +109,14 @@ module IntentRecord
 
       def run_attach
         command = Commands::Attach.new(intent_id: positional("intent_id"))
+        finish! { command.call(stdin_json) }
+      end
+
+      def run_backfill
+        command = Commands::Backfill.new(system: required_flag("--system"),
+                                         pattern: required_flag("--pattern"),
+                                         uri_prefix: @parser.take_flag("--uri-prefix"),
+                                         dry_run: @parser.take_switch?("--dry-run"))
         finish! { command.call(stdin_json) }
       end
 
