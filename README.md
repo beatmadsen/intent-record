@@ -115,24 +115,14 @@ intent-record backfill --system jira \
 Start with `--dry-run`. It writes nothing and reports the sources it would create along with the first twenty commit subjects that matched nothing, which is how you find the second convention your team used before you write anything:
 
 ```json
-{"created": 128, "skipped": 41, "failed": 0, "dry_run": true,
+{"created": 128, "linked": 0, "skipped": 41, "failed": 0, "dry_run": true,
  "sources": ["https://acme.atlassian.net/browse/ACME-42"],
  "unmatched": ["Fix a typo in the README", "Bump version to 0.4.1"]}
 ```
 
 Drop `--dry-run` to write. Each commit that names a ticket gets one record, linked to that commit and to every ticket its message names. A commit naming no ticket is not stored at all.
 
-A history may use more than one convention. **If the same commit can name both, match them in one pattern**, because the skip that makes reruns cheap works per commit rather than per reference: a commit the first pass recorded is skipped whole, and a second ticket in that commit is never linked.
-
-```bash
-intent-record backfill --system jira \
-  --pattern '(?:ACME-\d+|(?<![A-Za-z])#\d+)' \
-  --uri-prefix https://tickets.acme.com/ < history.json
-```
-
-The cost is one `--system` name covering both kinds of reference.
-
-Where the two conventions live in different commits, separate passes are better, since each reference then gets its own system name:
+A history may use more than one convention. Run it once per convention, each with its own system:
 
 ```bash
 intent-record backfill --system github-issues \
@@ -140,7 +130,9 @@ intent-record backfill --system github-issues \
   --uri-prefix https://github.com/acme/api/issues/ < history.json
 ```
 
-Either way a rerun is cheap: a commit that already has an intent is passed over.
+A commit the first pass already recorded keeps that record and gains the references this pass finds, so a commit naming both a Jira key and a GitHub issue ends up linked to both. The report counts those as `linked` rather than `created`.
+
+Reruns stay cheap. A pass that finds nothing new to link reports the commit as skipped and writes nothing.
 
 ### Options
 
@@ -169,7 +161,7 @@ The chain is always written oldest to newest, so the later commit builds on the 
 Each commit is written in its own transaction. One malformed hash in a history of thousands costs that commit and not the run, and the report names it:
 
 ```json
-{"created": 3, "skipped": 1, "failed": 1,
+{"created": 3, "linked": 0, "skipped": 1, "failed": 1,
  "failures": [{"commit": "bad-hash", "error": "git commit must be 40 or 64 hex characters, got \"bad-hash\""}]}
 ```
 
