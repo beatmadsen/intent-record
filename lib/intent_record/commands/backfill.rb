@@ -84,8 +84,14 @@ module IntentRecord
       # matched nothing is how a person finds the second convention their team
       # used. Only a dry run reports them: a write run is not an inspection.
       def unmatched(spec)
-        @unmatched << subject(spec) if @dry_run && @unmatched.size < UNMATCHED_SHOWN
+        @unmatched << subject(spec) if listable?(spec)
         :skipped
+      end
+
+      # A commit with no message has no subject to show, and a list of blank
+      # lines says nothing about what the pattern missed.
+      def listable?(spec)
+        @dry_run && @unmatched.size < UNMATCHED_SHOWN && !subject(spec).empty?
       end
 
       def noted(references)

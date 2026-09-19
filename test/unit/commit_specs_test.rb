@@ -24,10 +24,25 @@ class CommitSpecsTest < Minitest::Test
     assert_match(/commit/, error.message)
   end
 
-  def test_rejects_an_entry_that_carries_no_message
-    error = assert_raises(IntentRecord::ValidationError) { Specs.from({ "commits" => [{ "commit" => HASH }] }) }
+  # An empty commit message is rare and real, and it names no ticket, so it is
+  # the same as any commit that matches nothing. Refusing it here would abort a
+  # whole history over one commit nobody wrote a message for.
+  def test_an_entry_with_no_message_is_read_as_an_empty_one
+    read = Specs.from({ "commits" => [{ "commit" => HASH }] })
 
-    assert_match(/message/, error.message)
+    assert_equal "", read.sole[:message]
+  end
+
+  def test_an_entry_whose_message_is_only_whitespace_is_read_as_empty
+    read = Specs.from({ "commits" => [{ "commit" => HASH, "message" => "   \n " }] })
+
+    assert_equal "", read.sole[:message]
+  end
+
+  def test_a_message_that_is_not_a_string_is_still_refused
+    payload = { "commits" => [{ "commit" => HASH, "message" => 42 }] }
+
+    assert_raises(IntentRecord::ValidationError) { Specs.from(payload) }
   end
 
   # The bad entry is second, so accepting the first and failing afterwards is

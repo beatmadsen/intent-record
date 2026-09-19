@@ -133,6 +133,15 @@ class BackfillWritingTest < Minitest::Test
     assert_empty report["sources"]
   end
 
+  # A commit with no message has no subject to show, and a list of blank lines
+  # tells a reader nothing about what their pattern missed.
+  def test_a_commit_with_no_message_is_counted_but_not_listed_as_unmatched
+    report = backfill([commit(hash: TYPO_HASH, message: "   ")], dry_run: true)
+
+    assert_equal 1, report["skipped"]
+    assert_empty report["unmatched"]
+  end
+
   # A write run is not an inspection, and the list would drown the result.
   def test_a_write_run_does_not_carry_the_unmatched_list
     report = backfill([commit(hash: TYPO_HASH, message: "Fix a typo")])
