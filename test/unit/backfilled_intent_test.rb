@@ -54,6 +54,16 @@ class BackfilledIntentTest < Minitest::Test
     assert_operator built["summary"].length, :<=, limit
   end
 
+  # The boundary itself: a subject of exactly the cap fits and must come back
+  # whole, not shortened by three characters to make room for an ellipsis it
+  # does not need.
+  def test_a_subject_of_exactly_the_cap_is_left_alone
+    limit = IntentRecord::Models::IntentRecord::SUMMARY_MAX_LENGTH
+    subject = "z" * limit
+
+    assert_equal subject, intent_for("#{subject}\n\nbody")["summary"]
+  end
+
   def test_an_overlong_subject_survives_in_full_in_the_body
     limit = IntentRecord::Models::IntentRecord::SUMMARY_MAX_LENGTH
     subject = "y" * (limit + 50)

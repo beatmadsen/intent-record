@@ -142,6 +142,17 @@ class BackfillWritingTest < Minitest::Test
     assert_empty report["unmatched"]
   end
 
+  # The counts of a dry run and of a write run look identical, so the result has
+  # to say which one it was or a caller cannot tell whether anything was
+  # written.
+  def test_a_dry_run_says_it_was_one
+    assert_equal true, backfill([commit], dry_run: true)["dry_run"]
+  end
+
+  def test_a_write_run_does_not_claim_to_be_a_dry_run
+    refute backfill([commit])["dry_run"]
+  end
+
   # A write run is not an inspection, and the list would drown the result.
   def test_a_write_run_does_not_carry_the_unmatched_list
     report = backfill([commit(hash: TYPO_HASH, message: "Fix a typo")])

@@ -14,6 +14,14 @@ class CommitSpecsTest < Minitest::Test
     assert_equal [{ commit: HASH, author: "Dana", message: "ACME-42 Retry", ref: nil }], read
   end
 
+  # A list of bare hashes rather than objects is a plausible mistake, and
+  # reading one as a commit would fail somewhere less legible later.
+  def test_rejects_an_entry_that_is_not_an_object
+    error = assert_raises(IntentRecord::ValidationError) { Specs.from({ "commits" => [HASH] }) }
+
+    assert_match(/object/, error.message)
+  end
+
   def test_rejects_a_payload_whose_commits_is_not_an_array
     assert_raises(IntentRecord::ValidationError) { Specs.from({ "commits" => "nope" }) }
   end
