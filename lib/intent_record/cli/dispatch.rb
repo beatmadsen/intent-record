@@ -113,10 +113,12 @@ module IntentRecord
       end
 
       def run_backfill
-        command = Commands::Backfill.new(system: required_flag("--system"),
-                                         pattern: required_flag("--pattern"),
-                                         uri_prefix: @parser.take_flag("--uri-prefix"),
-                                         dry_run: @parser.take_switch?("--dry-run"))
+        command = Commands::Backfill.scanning(system: required_flag("--system"),
+                                              pattern: required_flag("--pattern"),
+                                              uri_prefix: @parser.take_flag("--uri-prefix"),
+                                              dry_run: @parser.take_switch?("--dry-run"),
+                                              order: @parser.take_flag("--order") ||
+                                           Commands::Backfill::DEFAULT_ORDER)
         finish! { command.call(stdin_json) }
       end
 

@@ -26,20 +26,48 @@ module IntentRecord
       # bury the counts.
       UNMATCHED_SHOWN = 20
 
-      def initialize(system:, pattern:, uri_prefix: nil, dry_run: false)
-        @scanner = IntentRecord::Backfill::ReferenceScanner.new(system: system, pattern: pattern,
-                                                                uri_prefix: uri_prefix)
+      # `git log` prints newest first, which is what a person pipes in without
+      # thinking about it, so that is the default. The chain is written oldest
+      # to newest either way; this only says which end of the list is which.
+      ORDERS = %w[newest-first oldest-first].freeze
+      DEFAULT_ORDER = "newest-first".freeze
+
+      # The three that say what a reference looks like travel together as the
+      # scanner, which is the thing they describe.
+      def self.scanning(system:, pattern:, uri_prefix: nil, **)
+        new(scanner: IntentRecord::Backfill::ReferenceScanner.new(system: system, pattern: pattern,
+                                                                  uri_prefix: uri_prefix),
+            **)
+      end
+
+      def initialize(scanner:, dry_run: false, order: DEFAULT_ORDER)
+        @scanner = scanner
         @dry_run = dry_run
+        @order = validated_order(order)
         @unmatched = []
         @sources = []
       end
 
       def call(input)
-        specs = IntentRecord::Backfill::CommitSpecs.from(input)
+        specs = chronological(IntentRecord::Backfill::CommitSpecs.from(input))
         report(specs.map { |spec| process(spec) })
       end
 
       private
+
+      def validated_order(order)
+        value = order.to_s.strip.downcase
+        return value if ORDERS.include?(value)
+
+        raise ValidationError, "--order must be one of #{ORDERS.join(", ")}, got #{order.inspect}"
+      end
+
+      # Each record links to the one before it, so the commits have to be
+      # written in the order they were made whichever end of the history the
+      # caller started from.
+      def chronological(specs)
+        @order == DEFAULT_ORDER ? specs.reverse : specs
+      end
 
       def process(spec)
         references = @scanner.call(searchable(spec))

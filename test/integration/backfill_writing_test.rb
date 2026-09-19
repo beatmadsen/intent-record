@@ -13,8 +13,8 @@ class BackfillWritingTest < Minitest::Test
   TYPO_HASH = "0123456789abcdef0123456789abcdef01234567".freeze
 
   def backfill(commits, **)
-    Backfill.new(system: "jira", pattern: 'ACME-\d+',
-                 uri_prefix: "https://acme.atlassian.net/browse/", **)
+    Backfill.scanning(system: "jira", pattern: 'ACME-\d+',
+                      uri_prefix: "https://acme.atlassian.net/browse/", **)
             .call({ "commits" => commits })
   end
 
@@ -152,14 +152,16 @@ class BackfillWritingTest < Minitest::Test
   SECOND_HASH = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e".freeze
 
   def test_the_next_commit_for_a_ticket_links_back_to_the_one_before
-    backfill([commit, commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout")])
+    backfill([commit, commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout")],
+             order: "oldest-first")
 
     second = Intent.find_by!(summary: "ACME-42 Raise the timeout")
     assert_equal(["ACME-42 Retry flaky fetches"], second.outgoing_links.map { |l| l.target.summary })
   end
 
   def test_the_first_commit_for_a_ticket_links_to_nothing
-    backfill([commit, commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout")])
+    backfill([commit, commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout")],
+             order: "oldest-first")
 
     first = Intent.find_by!(summary: "ACME-42 Retry flaky fetches")
     assert_empty first.outgoing_links
@@ -173,10 +175,32 @@ class BackfillWritingTest < Minitest::Test
   def test_a_third_commit_links_to_the_second_rather_than_the_first
     backfill([commit,
               commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout"),
-              commit(hash: THIRD_HASH, message: "ACME-42 Log the retries")])
+              commit(hash: THIRD_HASH, message: "ACME-42 Log the retries")],
+             order: "oldest-first")
 
     third = Intent.find_by!(summary: "ACME-42 Log the retries")
     assert_equal(["ACME-42 Raise the timeout"], third.outgoing_links.map { |l| l.target.summary })
+  end
+
+  # `git log` prints newest first, which is what a person actually pipes in, and
+  # the chain must still run oldest to newest: the later commit builds on the
+  # earlier one, never the reverse. Fed in that order the naive link points
+  # backwards, which is what this pins.
+  def test_a_history_given_newest_first_still_chains_oldest_to_newest
+    backfill([commit(hash: THIRD_HASH, message: "ACME-42 Log the retries"),
+              commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout"),
+              commit])
+
+    third = Intent.find_by!(summary: "ACME-42 Log the retries")
+    second = Intent.find_by!(summary: "ACME-42 Raise the timeout")
+    assert_equal(["ACME-42 Raise the timeout"], third.outgoing_links.map { |l| l.target.summary })
+    assert_equal(["ACME-42 Retry flaky fetches"], second.outgoing_links.map { |l| l.target.summary })
+  end
+
+  def test_the_oldest_commit_of_a_newest_first_history_links_to_nothing
+    backfill([commit(hash: SECOND_HASH, message: "ACME-42 Raise the timeout"), commit])
+
+    assert_empty Intent.find_by!(summary: "ACME-42 Retry flaky fetches").outgoing_links
   end
 
   # Two tickets are two chains. Linking across them would assert a relationship
@@ -195,6 +219,12 @@ class BackfillWritingTest < Minitest::Test
 
     second = Intent.find_by!(summary: "ACME-42 Raise the timeout")
     assert_equal(["ACME-42 Retry flaky fetches"], second.outgoing_links.map { |l| l.target.summary })
+  end
+
+  def test_an_order_it_does_not_know_is_refused
+    error = assert_raises(IntentRecord::ValidationError) { backfill([commit], order: "sideways") }
+
+    assert_match(/order/, error.message)
   end
 
   # The ticket is often only in the branch name, never in the message.

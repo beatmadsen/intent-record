@@ -89,6 +89,78 @@ Options take either `--name value` or `--name=value`. Unknown options and stray 
 
 An intent can be recorded before the commit exists and linked with `attach` afterwards. This also covers rebases and squashes, where the same intent ends up on a new hash. One commit can carry several intents and one intent can span several commits.
 
+## Backfilling an existing repo
+
+A repo that adopts intent-record already has years of history, and `lookup` and `by-source` answer nothing for any of it. That history is usually exactly what someone needs when they open unfamiliar code. The ticket keys are already in the commit messages, so `backfill` reads them and writes the rows `record` would have written at the time.
+
+It recovers the graph, not the reasoning. A commit message says what changed; only the person who made the change knew why. Every backfilled record says so in its body, which leaves the agent that next touches that code somewhere to attach the real reasoning.
+
+Commits go in on stdin as JSON, so the tool never shells out to git and the same command works for Perforce or Mercurial:
+
+```bash
+git log --format='%H%x00%an%x00%B%x01' | ruby -rjson -e '
+  commits = $stdin.read.split("\x01").map(&:strip).reject(&:empty?).map do |entry|
+    hash, author, message = entry.split("\x00", 3)
+    { "commit" => hash, "author" => author, "message" => message.to_s.strip }
+  end
+  puts JSON.generate({ "commits" => commits })
+' > history.json
+
+intent-record backfill --system jira \
+  --pattern 'ACME-\d+' \
+  --uri-prefix https://acme.atlassian.net/browse/ \
+  --dry-run < history.json
+```
+
+Start with `--dry-run`. It writes nothing and reports the sources it would create along with the first twenty commit subjects that matched nothing, which is how you find the second convention your team used before you write anything:
+
+```json
+{"created": 128, "skipped": 41, "failed": 0, "dry_run": true,
+ "sources": ["https://acme.atlassian.net/browse/ACME-42"],
+ "unmatched": ["Fix a typo in the README", "Bump version to 0.4.1"]}
+```
+
+Drop `--dry-run` to write. Each commit that names a ticket gets one record, linked to that commit and to every ticket its message names. A commit naming no ticket is not stored at all.
+
+Run it again whenever you like. A commit that already has an intent is passed over, so a second pass with a different pattern costs nothing and adds only what the first one missed:
+
+```bash
+intent-record backfill --system github-issues \
+  --pattern '#(\d+)' \
+  --uri-prefix https://github.com/acme/api/issues/ < history.json
+```
+
+### Options
+
+- `--system <name>` names the stakeholder system the references belong to. Required.
+- `--pattern <regex>` says what a reference looks like in a message. Required.
+- `--uri-prefix <url>` is prepended to the key to give the source uri. Without it, the whole match is the uri.
+- `--dry-run` reports what it would write and writes nothing.
+- `--order <newest-first|oldest-first>` says which end of the history the list starts at. Defaults to `newest-first`, which is what `git log` gives you.
+
+A capture group narrows what gets appended to the prefix. `ACME-\d+` with prefix `https://acme.atlassian.net/browse/` appends `ACME-42`; `ENG-(\d+)` with prefix `https://linear.app/acme/issue/ENG-` appends `7`. The source is titled with the matched text either way, so `search ENG-7` finds it.
+
+There is no default pattern per system, because Jira and Linear keys look alike and only you know which one `ABC-123` means.
+
+### What it does with the history
+
+Each entry takes a `commit` and a `message`, plus an optional `author` and `ref`. The ref is the branch name, scanned alongside the message for teams that put the key in the branch and never in the commit.
+
+Commits for the same ticket are chained. Each record links to the most recent earlier record for that ticket, so `show` on any one of them walks back through the others, and the chain continues across separate runs.
+
+The chain is always written oldest to newest, so the later commit builds on the earlier one. That needs to know which end of your list is the old end, which is what `--order` says. `git log` prints newest first and that is the default, so a reversed list (`git log --reverse`) needs `--order oldest-first` or every link points backwards.
+
+Each commit is written in its own transaction. One malformed hash in a history of thousands costs that commit and not the run, and the report names it:
+
+```json
+{"created": 3, "skipped": 1, "failed": 1,
+ "failures": [{"commit": "bad-hash", "error": "git commit must be 40 or 64 hex characters, got \"bad-hash\""}]}
+```
+
+Those failures come back on every rerun, since a hash that is not a hash can never be written.
+
+Rewriting history changes hashes, and a rerun after a rebase links the new hashes to new records. The old ones stay, pointing at commits that no longer exist.
+
 ## Data model
 
 Commit hashes are treated as globally unique, so the store does not track which repository a commit belongs to. VCS and stakeholder system names are lowercased on the way in, and the common ones are seeded on first connect; `intent-record systems` lists them. Unknown names are added on first use.

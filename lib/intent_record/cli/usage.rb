@@ -25,6 +25,7 @@ module IntentRecord
         --pattern <regex>               What a reference looks like in a message (required).
                                         A capture group narrows what is appended to the prefix
         --uri-prefix <url>              Prefix + key = source uri. Without it the whole match is the uri
+        --order <which-first>           newest-first (default, as git log prints) or oldest-first
         --dry-run                       Report what it would write, write nothing
         {"commits": [{"commit": "<hash>", "message": "<commit message>",
                       "author": "...", "ref": "<branch name>"}]}
