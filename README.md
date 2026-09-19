@@ -122,13 +122,25 @@ Start with `--dry-run`. It writes nothing and reports the sources it would creat
 
 Drop `--dry-run` to write. Each commit that names a ticket gets one record, linked to that commit and to every ticket its message names. A commit naming no ticket is not stored at all.
 
-Run it again whenever you like. A commit that already has an intent is passed over, so a second pass with a different pattern costs nothing and adds only what the first one missed:
+A history may use more than one convention. **If the same commit can name both, match them in one pattern**, because the skip that makes reruns cheap works per commit rather than per reference: a commit the first pass recorded is skipped whole, and a second ticket in that commit is never linked.
+
+```bash
+intent-record backfill --system jira \
+  --pattern '(?:ACME-\d+|(?<![A-Za-z])#\d+)' \
+  --uri-prefix https://tickets.acme.com/ < history.json
+```
+
+The cost is one `--system` name covering both kinds of reference.
+
+Where the two conventions live in different commits, separate passes are better, since each reference then gets its own system name:
 
 ```bash
 intent-record backfill --system github-issues \
-  --pattern '#(\d+)' \
+  --pattern '(?<![A-Za-z])#(\d+)' \
   --uri-prefix https://github.com/acme/api/issues/ < history.json
 ```
+
+Either way a rerun is cheap: a commit that already has an intent is passed over.
 
 ### Options
 
@@ -139,6 +151,8 @@ intent-record backfill --system github-issues \
 - `--order <newest-first|oldest-first>` says which end of the history the list starts at. Defaults to `newest-first`, which is what `git log` gives you.
 
 A capture group narrows what gets appended to the prefix. `ACME-\d+` with prefix `https://acme.atlassian.net/browse/` appends `ACME-42`; `ENG-(\d+)` with prefix `https://linear.app/acme/issue/ENG-` appends `7`. The source is titled with the matched text either way, so `search ENG-7` finds it.
+
+A pattern matches anywhere in the message, including inside another key. `#(\d+)` finds the `77` in an Azure `AB#77` and links it to GitHub issue 77, which is a different thing entirely. Where a history mixes conventions, anchor the loose one: `(?<![A-Za-z])#(\d+)` matches `closes #123` and `fix (#42)` while leaving `AB#77` alone.
 
 Patterns are case-sensitive, and so are the uris they build. A history that writes `ACME-42` in some commits and `acme-42` in others gives you two sources unless the pattern normalises the case for you. `(?i)acme-\d+` matches both but still builds a uri from whatever each commit wrote, so match the case you want with the pattern itself and run a second pass for the stragglers.
 
