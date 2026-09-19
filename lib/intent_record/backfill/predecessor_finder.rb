@@ -14,8 +14,11 @@ module IntentRecord
     module PredecessorFinder
       module_function
 
+      # A commit naming two tickets with the same predecessor asks for that
+      # link once, which IntentLinker's find-or-create already settles, so the
+      # duplicate is left for it rather than removed twice.
       def for(references)
-        references.filter_map { |reference| latest_intent_for(reference) }.uniq
+        references.filter_map { |reference| latest_intent_for(reference) }
       end
 
       def latest_intent_for(reference)

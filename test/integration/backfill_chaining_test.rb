@@ -60,6 +60,25 @@ class BackfillChainingTest < Minitest::Test
     assert_empty builds_on("ACME-99 Something else")
   end
 
+  # The other ticket already has a record, so a finder that ignores which
+  # source it was asked about would reach for that one rather than finding
+  # nothing. An empty store cannot tell those two apart.
+  def test_a_new_ticket_links_to_nothing_even_where_another_ticket_has_a_chain
+    backfill([commit, commit(hash: SECOND_HASH, message: TIMEOUT_SUBJECT)], order: "oldest-first")
+    backfill([commit(hash: THIRD_HASH, message: "ACME-99 Something else")])
+
+    assert_empty builds_on("ACME-99 Something else")
+  end
+
+  # One commit naming two tickets that both already have the same predecessor
+  # asks for one link, not the same link twice.
+  def test_a_commit_naming_two_tickets_with_one_shared_predecessor_links_once
+    backfill([commit(message: "ACME-42 and ACME-99 together")])
+    backfill([commit(hash: SECOND_HASH, message: "ACME-42 and ACME-99 again")])
+
+    assert_equal ["ACME-42 and ACME-99 together"], builds_on("ACME-42 and ACME-99 again")
+  end
+
   # The predecessor is asked of the store, so a later run continues the chain
   # rather than starting a parallel one.
   def test_a_later_run_links_onto_the_chain_the_earlier_run_left

@@ -16,22 +16,21 @@ class ReferenceScannerTest < Minitest::Test
                     "title" => "ACME-42" }], found
   end
 
-  # Linear and Jira keys look alike, so the prefix carries the project and the
+  # Jira and Linear keys look alike, so the prefix carries the project and the
   # group carries only the number.
-  def test_capture_group_is_what_gets_appended_when_the_pattern_has_one
-    found = scanner(pattern: 'ENG-(\\d+)', uri_prefix: "https://linear.app/acme/issue/ENG-", system: "linear")
-            .call("ENG-7 Rework the queue")
+  def linear_reference
+    scanner(pattern: 'ENG-(\\d+)', uri_prefix: "https://linear.app/acme/issue/ENG-", system: "linear")
+      .call("ENG-7 Rework the queue").sole
+  end
 
-    assert_equal "https://linear.app/acme/issue/ENG-7", found.sole["uri"]
+  def test_capture_group_is_what_gets_appended_when_the_pattern_has_one
+    assert_equal "https://linear.app/acme/issue/ENG-7", linear_reference["uri"]
   end
 
   # The group narrows the uri, not the name. A source titled "7" tells a reader
   # nothing and makes `search ENG-7` miss it.
   def test_title_is_the_matched_text_even_where_a_group_narrowed_the_uri
-    found = scanner(pattern: 'ENG-(\\d+)', uri_prefix: "https://linear.app/acme/issue/ENG-", system: "linear")
-            .call("ENG-7 Rework the queue")
-
-    assert_equal "ENG-7", found.sole["title"]
+    assert_equal "ENG-7", linear_reference["title"]
   end
 
   def test_the_whole_match_is_the_uri_when_no_prefix_is_given
@@ -79,15 +78,16 @@ class ReferenceScannerTest < Minitest::Test
     assert_equal "ACME-42", found.sole["title"]
   end
 
-  # The pattern is the person's own, and a hang would give them no output and no
-  # way to tell what went wrong. Ruby's engine memoises its way out of every
-  # catastrophic pattern this suite could find, so what is pinned here is that
-  # the budget is set on the compiled pattern: it is the part that would regress
-  # silently, and it is the whole of the guard on a Ruby whose engine gives up.
-  def test_the_compiled_pattern_carries_a_match_timeout
-    compiled = scanner.send(:instance_variable_get, :@pattern)
+  # A hang would give the person no output and no way to tell what went wrong.
+  # Ruby's engine memoises its way out of every catastrophic pattern this suite
+  # could find, so what is pinned is that the budget reaches the compiled
+  # pattern; it is the whole of the guard on an engine that gives up, and the
+  # part that would regress in silence.
+  def test_the_pattern_is_compiled_with_a_match_timeout
+    given = nil
+    Regexp.stub(:new, ->(source, **options) { given = options[:timeout]; /#{source}/ }) { scanner }
 
-    assert_equal Scanner::MATCH_TIMEOUT_SECONDS, compiled.timeout
+    assert_equal Scanner::MATCH_TIMEOUT_SECONDS, given
   end
 
   # And that a timeout, however it arises, is reported as a pattern problem
