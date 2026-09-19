@@ -62,6 +62,18 @@ class BackfillDryRunTest < Minitest::Test
     assert_empty dry_run([commit])["sources"]
   end
 
+  # The promise applies to the links a later pass would add, not only to the
+  # records a first pass would create.
+  def test_a_dry_run_of_a_later_pass_adds_no_links
+    backfill([commit(message: "ACME-42 and GH-7 together")])
+    second = IntentRecord::Commands::Backfill.scanning(system: "github-issues", pattern: 'GH-\d+',
+                                                       uri_prefix: "https://gh.test/issues/", dry_run: true)
+    report = second.call({ "commits" => [commit(message: "ACME-42 and GH-7 together")] })
+
+    assert_equal 1, report["linked"]
+    assert_equal ["https://acme.atlassian.net/browse/ACME-42"], Intent.sole.stakeholder_sources.map(&:uri)
+  end
+
   # A write run is not an inspection, and the lists would drown the counts.
   def test_a_write_run_carries_no_inspection
     report = backfill([unmatched_commit])
