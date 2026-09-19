@@ -92,12 +92,13 @@ class ReferenceScannerTest < Minitest::Test
 
   # And that a timeout, however it arises, is reported as a pattern problem
   # rather than escaping as an engine error nobody can act on. No pattern this
-  # suite can write makes this engine time out, so the translation is reached
-  # through the seam that exists for it rather than by provoking the engine.
+  # suite can write makes this engine time out, so the message is made to raise
+  # it instead of the pattern.
   def test_a_match_timeout_is_reported_against_the_pattern
-    error = assert_raises(IntentRecord::ValidationError) do
-      scanner.matching { raise Regexp::TimeoutError }
-    end
+    timing_out = Object.new
+    def timing_out.to_s = raise(Regexp::TimeoutError)
+
+    error = assert_raises(IntentRecord::ValidationError) { scanner.call(timing_out) }
 
     assert_match(/pattern/i, error.message)
   end

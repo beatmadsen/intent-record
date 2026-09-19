@@ -1,3 +1,5 @@
 require_relative "backfill/backfilled_intent"
 require_relative "backfill/commit_specs"
+require_relative "backfill/inspection"
+require_relative "backfill/predecessor_finder"
 require_relative "backfill/reference_scanner"

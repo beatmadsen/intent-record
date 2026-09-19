@@ -5,9 +5,10 @@ module IntentRecord
     # reaches the database.
     class ReferenceScanner
       # A pattern that backtracks catastrophically would otherwise hang the
-      # command with no output, on input the person cannot see. The budget is
-      # per message and generous: a pattern anyone would write finishes in
-      # microseconds.
+      # command with no output. Ruby's engine memoises its way out of every
+      # such pattern this suite could construct, so the budget rarely decides
+      # anything; it is what stands between a report and a hang on an engine
+      # that gives up.
       MATCH_TIMEOUT_SECONDS = 2.0
 
       def initialize(system:, pattern:, uri_prefix:)
@@ -17,31 +18,12 @@ module IntentRecord
       end
 
       def call(message)
-        found = matching { matches(message) }
-        distinct(found).map { |m| reference(m) }
-      end
-
-      # Ruby's engine memoises its way out of the catastrophic patterns anyone
-      # can construct, so this rarely fires. It is still the difference between
-      # a command that reports and one that hangs with no output, on a Ruby
-      # whose engine gives up, and it is public because that is the only way to
-      # prove the translation happens.
-      def matching
-        yield
+        distinct(matches(message)).map { |match| reference(match) }
       rescue Regexp::TimeoutError
-        raise ValidationError,
-              "--pattern took longer than #{MATCH_TIMEOUT_SECONDS}s on one commit message; " \
-              "it probably backtracks catastrophically"
+        raise ValidationError, timeout_message
       end
 
       private
-
-      # A message naming the same ticket twice, as merge commits do, asks for
-      # one source and not two. Keyed on the uri, because that is what makes a
-      # source the same source downstream.
-      def distinct(found)
-        found.uniq { |m| m[:uri] }
-      end
 
       def compiled(pattern)
         Regexp.new(pattern, timeout: MATCH_TIMEOUT_SECONDS)
@@ -57,6 +39,13 @@ module IntentRecord
                .map { |m| { uri: uri_for(key_of(m)), title: m[0] } }
       end
 
+      # A message naming the same ticket twice, as merge commits do, asks for
+      # one source and not two. Keyed on the uri, because that is what makes a
+      # source the same source downstream.
+      def distinct(found)
+        found.uniq { |match| match[:uri] }
+      end
+
       def reference(match)
         { "system" => @system, "uri" => match[:uri], "title" => match[:title] }
       end
@@ -70,6 +59,11 @@ module IntentRecord
       # project. With no group the whole match is the key.
       def key_of(match)
         match.size > 1 ? match[1] : match[0]
+      end
+
+      def timeout_message
+        "--pattern took longer than #{MATCH_TIMEOUT_SECONDS}s on one commit message; " \
+          "it probably backtracks catastrophically"
       end
     end
   end

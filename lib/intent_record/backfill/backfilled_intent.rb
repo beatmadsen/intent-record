@@ -30,12 +30,12 @@ module IntentRecord
 
       private
 
+      # A truncated summary loses nothing: the body below keeps the subject
+      # whole.
       def summary
         subject.empty? ? BLANK_SUMMARY : truncated(subject)
       end
 
-      # The subject is kept whole in the body, so a truncated summary loses
-      # nothing: the full text is one line further down.
       def body
         [MARKER, @message.strip].reject(&:empty?).join("\n\n")
       end

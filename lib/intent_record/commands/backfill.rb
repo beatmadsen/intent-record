@@ -1,11 +1,10 @@
 require_relative "record"
 require_relative "../backfill/backfilled_intent"
 require_relative "../backfill/commit_specs"
+require_relative "../backfill/inspection"
+require_relative "../backfill/predecessor_finder"
 require_relative "../backfill/reference_scanner"
 require_relative "../models/asset_version"
-require_relative "../models/intent_record"
-require_relative "../models/stakeholder_source"
-require_relative "../stakeholder_normalizer"
 require_relative "../asset_version_normalizer"
 
 module IntentRecord
@@ -21,19 +20,12 @@ module IntentRecord
     # an intent is passed over, which is what makes a second run cheap: finding
     # the convention you missed is the normal way to use this.
     class Backfill
-      # A real history has thousands of unmatched commits and nobody reads
-      # thousands of lines. Enough to recognise a convention, not enough to
-      # bury the counts.
-      UNMATCHED_SHOWN = 20
-
       # `git log` prints newest first, which is what a person pipes in without
       # thinking about it, so that is the default. The chain is written oldest
       # to newest either way; this only says which end of the list is which.
       ORDERS = %w[newest-first oldest-first].freeze
       DEFAULT_ORDER = "newest-first".freeze
 
-      # The three that say what a reference looks like travel together as the
-      # scanner, which is the thing they describe.
       def self.scanning(system:, pattern:, uri_prefix: nil, **)
         new(scanner: IntentRecord::Backfill::ReferenceScanner.new(system: system, pattern: pattern,
                                                                   uri_prefix: uri_prefix),
@@ -46,12 +38,9 @@ module IntentRecord
         @order = validated_order(order)
       end
 
-      # What a dry run saw is gathered per call rather than on the instance, so
-      # a second call reports that call and the report never hands back an array
-      # the command goes on writing to.
       def call(input)
         specs = chronological(IntentRecord::Backfill::CommitSpecs.from(input))
-        seen = Inspection.new(@dry_run)
+        seen = IntentRecord::Backfill::Inspection.new(@dry_run)
         report(specs.map { |spec| process(spec, seen) }, seen)
       end
 
@@ -64,9 +53,8 @@ module IntentRecord
         raise ValidationError, "--order must be one of #{ORDERS.join(", ")}, got #{order.inspect}"
       end
 
-      # Each record links to the one before it, so the commits have to be
-      # written in the order they were made whichever end of the history the
-      # caller started from.
+      # Each record links to the one before it, so the commits are written in
+      # the order they were made whichever end of the history the caller gave.
       def chronological(specs)
         @order == DEFAULT_ORDER ? specs.reverse : specs
       end
@@ -86,8 +74,8 @@ module IntentRecord
         spec[:message].strip.lines.first.to_s.strip
       end
 
-      # The key is as often in the branch name as in the message, and a team that
-      # puts it there never puts it in both.
+      # The key is as often in the branch name as in the message, and a team
+      # that puts it there never puts it in both.
       def searchable(spec)
         [spec[:message], spec[:ref]].compact.join("\n")
       end
@@ -101,33 +89,7 @@ module IntentRecord
         intent = IntentRecord::Backfill::BackfilledIntent.new(message: spec[:message], author: spec[:author])
         intent.to_h.merge("commits" => [spec[:commit]],
                           "stakeholder_references" => references,
-                          "related_intent_ids" => predecessors(references))
-      end
-
-      # Successive commits for one ticket are almost always a chain, and the
-      # link is what makes `show` on any one of them tell the story rather than
-      # present an isolated record. Asked of the store rather than remembered
-      # within the run, so a second run continues the chain the first one left.
-      #
-      # The most recent one only: linking to every earlier commit for the ticket
-      # would say each builds on all of them, which is a claim the history does
-      # not support.
-      def predecessors(references)
-        references.filter_map { |ref| latest_intent_for(ref) }.uniq
-      end
-
-      def latest_intent_for(reference)
-        Models::IntentRecord.joins(:stakeholder_sources)
-                            .where(stakeholder_sources: { id: source_id(reference) })
-                            .order(created_at: :desc, id: :desc).first&.global_id
-      end
-
-      def source_id(reference)
-        Models::StakeholderSource.joins(:stakeholder_system)
-                                 .find_by(stakeholder_systems: {
-                                            name: StakeholderNormalizer.system_name(reference["system"])
-                                          },
-                                          uri: StakeholderNormalizer.uri(reference["uri"]))&.id
+                          "related_intent_ids" => IntentRecord::Backfill::PredecessorFinder.for(references))
       end
 
       # Asked of the store rather than remembered, so a commit recorded by an
@@ -154,46 +116,6 @@ module IntentRecord
           "skipped" => outcomes.count(:skipped),
           "failed" => failures.size,
           "failures" => failures.map { |f| { "commit" => f[:commit], "error" => f[:error] } } }
-      end
-
-      # What one dry run saw: the sources it would create, so they can be
-      # eyeballed, and the subjects that matched nothing, so the pattern that
-      # missed them can be written. A write run gathers neither, and reports
-      # neither, because it is not an inspection.
-      class Inspection
-        def initialize(collecting)
-          @collecting = collecting
-          @sources = []
-          @unmatched = []
-        end
-
-        # The pattern is never right the first time, and seeing which subjects
-        # matched nothing is how a person finds the second convention their
-        # team used.
-        def missed(subject)
-          @unmatched << subject if listable?(subject)
-          :skipped
-        end
-
-        def noted(references)
-          @sources.concat(references.map { |r| r["uri"] }) if @collecting
-        end
-
-        # Each call builds its own Inspection, so these arrays are this call's
-        # and copying them again would protect nothing.
-        def to_h
-          return {} unless @collecting
-
-          { "dry_run" => true, "sources" => @sources.uniq, "unmatched" => @unmatched }
-        end
-
-        private
-
-        # A commit with no message has no subject to show, and a list of blank
-        # lines says nothing about what the pattern missed.
-        def listable?(subject)
-          @collecting && @unmatched.size < UNMATCHED_SHOWN && !subject.empty?
-        end
       end
     end
   end

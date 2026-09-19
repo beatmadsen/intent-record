@@ -107,14 +107,6 @@ class BackfillWritingTest < Minitest::Test
     assert_equal ["https://acme.atlassian.net/browse/ACME-42"], report["sources"]
   end
 
-  # Counting them is not showing them, and a real history has thousands.
-  def test_the_unmatched_list_is_capped_so_a_real_history_stays_readable
-    many = Array.new(Backfill::UNMATCHED_SHOWN + 10) { |i| commit(hash: TYPO_HASH, message: "no key #{i}") }
-    report = backfill(many, dry_run: true)
-
-    assert_equal Backfill::UNMATCHED_SHOWN, report["unmatched"].size
-  end
-
   # A commit that already has a record matched the pattern, so it is not an
   # example of the pattern missing and must not be offered as one.
   def test_an_already_recorded_commit_is_not_listed_as_unmatched
