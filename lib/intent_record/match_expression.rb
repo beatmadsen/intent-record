@@ -33,13 +33,25 @@ module IntentRecord
     end
 
     def phrase(term)
+      text = term.respond_to?(:text) ? term.text : term
       # A term of pure punctuation tokenises to nothing, and an empty phrase is
       # a syntax error rather than a phrase that matches nothing.
-      return nil unless term.to_s.match?(/[[:alnum:]]/)
+      return nil unless text.to_s.match?(/[[:alnum:]]/)
 
-      "#{QUOTE}#{term.gsub(QUOTE, QUOTE * 2)}#{QUOTE}"
+      column(term) + quoted(text)
     end
 
-    private_class_method :phrase
+    # FTS5 reads `summary:"retry"` as that phrase in that column only. A term
+    # naming no column is left unprefixed and is answered over all of them.
+    def column(term)
+      name = term.respond_to?(:index_column) ? term.index_column : nil
+      name.nil? ? "" : "#{name}:"
+    end
+
+    def quoted(text)
+      "#{QUOTE}#{text.gsub(QUOTE, QUOTE * 2)}#{QUOTE}"
+    end
+
+    private_class_method :phrase, :column, :quoted
   end
 end

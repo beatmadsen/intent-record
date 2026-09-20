@@ -8,7 +8,7 @@ module IntentRecord
         attach <intent_id>              Link more commits / stakeholder refs / related intents (JSON via stdin)
         show <intent_id>                Full intent record
         lookup <commit> [--vcs name]    Intents recorded against a commit (full hash or unique prefix)
-        search <terms...> [--match all] Substring search over summary and body
+        search <terms...> [--match all] Search over summary, body and ticket links, best match first
         by-source <uri> [--contains]    Intents linked to a stakeholder uri (Jira ticket, Confluence page, ...)
         recent [--limit N]              Newest intents first
         systems                         Known vcs and stakeholder system names
@@ -28,6 +28,13 @@ module IntentRecord
         --uri-prefix <url>              Prefix + key = source uri. Without it the whole match is the uri
         --order <which-first>           newest-first (default, as git log prints) or oldest-first
         --dry-run                       Report what it would write, write nothing
+
+      Search terms:
+        Ranked best first. A plain word also matches its other forms, so `retry`
+        finds "retried". A term carrying punctuation is matched literally, so
+        `100%` does not match "100 percent". A term may name one field:
+        summary:retry, body:retry, uri:ACME-42, title:flaky. Only those four
+        names count, so a ticket url is searched as itself.
 
       Input shape for blame (vcs defaults to git):
         {"vcs": "git", "lines": [{"line": 40, "external_id": "<hash>"}]}

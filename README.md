@@ -112,6 +112,15 @@ said `retried`. A term carrying punctuation is matched as the literal you typed:
 `100%` does not match "100 percent", and `ACME-4` still finds `ACME-42` the way a
 substring search does. That split is why a ticket key works as a search term.
 
+A term can name one field, for when a common word turns up everywhere:
+
+```bash
+intent-record search summary:retry    # summary, body, uri or title
+```
+
+Only those four names count as a name, so a ticket URL is searched as itself
+rather than read as a field called `https`.
+
 ## Why is this line here
 
 `lookup` answers for a commit, which means finding the commit first. That is three

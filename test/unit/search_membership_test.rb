@@ -9,7 +9,7 @@ class SearchMembershipTest < Minitest::Test
   Subject = IntentRecord::SearchMembership
 
   def condition(terms, match: "any")
-    Subject.new(terms: terms, match: match).condition
+    Subject.new(terms: terms.map { |t| IntentRecord::SearchTerm.parse(t) }, match: match).condition
   end
 
   def sql(terms, match: "any")
@@ -48,5 +48,17 @@ class SearchMembershipTest < Minitest::Test
   def test_a_word_term_binds_its_substring_pattern_and_its_index_phrase
     assert_includes binds(["retry"]), "%retry%"
     assert_includes binds(["retry"]), '"retry"'
+  end
+
+  # A term naming a field looks in that field only, so it binds one pattern
+  # rather than one per field.
+  def test_a_term_naming_a_field_binds_one_substring_pattern
+    assert_equal 1, binds(["summary:retry"]).count("%retry%")
+  end
+
+  # Only summary and body are in the index, so naming a stakeholder field leaves
+  # the substring arm alone to answer the term.
+  def test_a_term_naming_a_stakeholder_field_is_matched_only_as_a_substring
+    refute_includes sql(["uri:acme"]), "EXISTS"
   end
 end
