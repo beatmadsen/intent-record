@@ -94,3 +94,39 @@ class SearchPhraseTest < Minitest::Test
     assert_equal([hit["intent_id"]], found("retry the fetch"))
   end
 end
+
+# A term of pure punctuation is a term the index cannot read at all: it holds no
+# token, and an empty MATCH expression is a syntax error rather than an
+# expression that matches nothing. Substring matching still answers it, so the
+# search works and only the ranking has nothing to rank.
+class SearchUnrankableTermTest < Minitest::Test
+  include IntentRecordDsl
+
+  def test_a_term_with_no_searchable_token_still_finds_it_as_a_substring
+    hit = record_intent!(summary: "Uses ... as a separator", body: "b")
+    record_intent!(summary: "Plain record", body: "b")
+
+    found = run_cli_ok!("search", "...")["intents"].map { |r| r["intent_id"] }
+
+    assert_equal([hit["intent_id"]], found)
+  end
+
+  # Nothing to rank by leaves the tie-break, which is the order `recent` answers
+  # in. Without it the rows come back in whatever order the plan produces.
+  def test_results_with_nothing_to_rank_by_are_answered_newest_first
+    older = record_intent!(summary: "First ... separator", body: "b")
+    newer = record_intent!(summary: "Second ... separator", body: "b")
+
+    found = run_cli_ok!("search", "...")["intents"].map { |r| r["intent_id"] }
+
+    assert_equal([newer["intent_id"], older["intent_id"]], found)
+  end
+
+  def test_a_term_with_no_searchable_token_still_carries_a_fragment
+    record_intent!(summary: "Uses ... as a separator", body: "The reason it is here.")
+
+    snippet = run_cli_ok!("search", "...")["intents"].sole["snippet"]
+
+    assert_equal "The reason it is here.", snippet
+  end
+end

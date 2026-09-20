@@ -45,3 +45,25 @@ class SearchSnippetTextTest < Minitest::Test
     refute_includes Subject.text(indexed: nil, body: "Short."), "…"
   end
 end
+
+# The boundary of the cut. A body exactly at the limit needs no cutting, and
+# cutting it anyway would add an ellipsis promising text that does not exist.
+class SearchSnippetBoundaryTest < Minitest::Test
+  Subject = IntentRecord::SearchSnippet
+
+  def body_of(length)
+    "w" * length
+  end
+
+  def test_a_body_exactly_at_the_limit_is_left_whole
+    body = body_of(Subject::FALLBACK_LENGTH)
+
+    assert_equal body, Subject.text(indexed: nil, body: body)
+  end
+
+  def test_a_body_one_character_past_the_limit_is_cut
+    text = Subject.text(indexed: nil, body: body_of(Subject::FALLBACK_LENGTH + 1))
+
+    refute_equal body_of(Subject::FALLBACK_LENGTH + 1), text
+  end
+end

@@ -53,6 +53,15 @@ class BlameSpansTest < Minitest::Test
     assert_raises(IntentRecord::ValidationError) { Subject.new([{ "line" => 1 }]).call }
   end
 
+  # Without this guard the entry is subscripted anyway. A string happens to
+  # answer that with nil and fails later for another reason, but an array raises
+  # TypeError, which is not an IntentRecord::Error and so escapes the CLI's
+  # promise that every failure comes back as {"error": ...} with exit 1.
+  def test_a_line_that_is_not_an_object_at_all_is_refused
+    error = assert_raises(IntentRecord::ValidationError) { Subject.new([[40, FIRST]]).call }
+    assert_match(/line and an external_id/, error.message)
+  end
+
   def test_a_line_number_that_is_not_a_number_is_refused
     assert_raises(IntentRecord::ValidationError) { spans([["forty", FIRST]]) }
   end
