@@ -6,6 +6,8 @@ Notable changes, one section per released version. The format follows
 
 ## Unreleased
 
+## 1.2.0 - 2026-09-20
+
 ### Added
 
 - `blame`, which answers "why is this line here" for a range of lines. Blame output goes in on stdin, so the tool still never shells out to git and the same command works for Perforce or Mercurial. `--format git-porcelain` reads what `git blame --porcelain` prints, so the common case is one command.
