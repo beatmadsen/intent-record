@@ -26,6 +26,13 @@ class SearchTermTest < Minitest::Test
     assert_equal "retry", parse("summary:retry").text
   end
 
+  # Every other name the tool takes is lowercased on input, and a field name
+  # that is not would send `Summary:retry` off to be matched as that literal.
+  def test_a_field_name_is_read_whatever_its_case
+    assert_equal ["intent_records.summary"], parse("SUMMARY:retry").fields
+    assert_equal "retry", parse("Summary:retry").text
+  end
+
   def test_naming_the_body_narrows_the_fields_to_it
     assert_equal ["intent_records.body"], parse("body:retry").fields
   end

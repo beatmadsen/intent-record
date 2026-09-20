@@ -107,6 +107,19 @@ class BlamePorcelainFormatTest < Minitest::Test
     assert span["uncommitted"], "expected the span to say the line is not committed"
   end
 
+  # The zero hash is a valid shape, so a store can hold a record against it, and
+  # a real one did. A line that is not in the history cannot have had anything
+  # recorded against it, so whatever sits under that id is noise and must not be
+  # answered as though the line had a history after all.
+  def test_an_uncommitted_line_is_not_answered_with_whatever_sits_under_the_zero_hash
+    record_intent!(summary: "Noise recorded against the zero hash", commits: [UNCOMMITTED])
+
+    span = run_cli_ok!("blame", "--format", "git-porcelain",
+                       stdin: porcelain([UNCOMMITTED, 3])).fetch("spans").sole
+
+    assert_empty span["intents"]
+  end
+
   def test_a_committed_line_is_not_called_uncommitted
     span = run_cli_ok!("blame", "--format", "git-porcelain",
                        stdin: porcelain([SHA, 7])).fetch("spans").sole

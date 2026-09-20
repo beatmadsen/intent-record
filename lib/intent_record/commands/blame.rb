@@ -16,7 +16,10 @@ module IntentRecord
 
       # Git's all-zero object id, which blame gives a line that is in the working
       # copy and not in the history. It is not a commit, so a reader is told the
-      # line is not committed rather than that nothing was recorded against it.
+      # line is not committed rather than that nothing was recorded against it,
+      # and the store is not asked about it at all: the id is a valid shape, so
+      # a record can sit under it, and one did, but a line with no history cannot
+      # have had anything recorded against it.
       UNCOMMITTED = ("0" * 40).freeze
 
       def call(input)
@@ -29,7 +32,7 @@ module IntentRecord
       private
 
       def answers(spans, vcs)
-        known = versions(spans, vcs)
+        known = versions(spans.reject { |span| uncommitted?(span, vcs) }, vcs)
         spans.map { |span| answer(span, vcs, known[AssetVersionNormalizer.lookup_id(vcs, span.external_id)]) }
       end
 

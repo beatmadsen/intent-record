@@ -14,7 +14,8 @@ module IntentRecord
     FIELDS = RECORD_FIELDS.merge(STAKEHOLDER_FIELDS).freeze
     ALL_FIELDS = FIELDS.values.freeze
 
-    NAMED = /\A(#{FIELDS.keys.join("|")}):(.*)\z/m
+    # Case-insensitive, as every other name the tool takes is.
+    NAMED = /\A(#{FIELDS.keys.join("|")}):(.*)\z/mi
 
     attr_reader :text, :fields, :index_column
 
@@ -22,7 +23,7 @@ module IntentRecord
       match = NAMED.match(raw)
       return new(text: raw, fields: ALL_FIELDS, index_column: nil) if match.nil?
 
-      named(match[1], match[2])
+      named(match[1].downcase, match[2])
     end
 
     def self.named(name, text)
