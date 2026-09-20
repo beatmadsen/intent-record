@@ -48,8 +48,11 @@ module IntentRecord
         [line_number(line["line"]), InputValidator.required_string!(line, "external_id")]
       end
 
+      # A string is read in base ten: Integer() on its own reads "010" as
+      # octal and answers about line 8, a wrong answer given confidently. A
+      # fraction is refused rather than truncated for the same reason.
       def line_number(raw)
-        number = Integer(raw, exception: false)
+        number = raw.is_a?(Integer) ? raw : Integer(raw.to_s, 10, exception: false)
         raise ValidationError, "line must be a positive integer, got #{raw.inspect}" if number.nil? || number < 1
 
         number

@@ -11,8 +11,9 @@ class CreateSearchIndex < ActiveRecord::Migration[8.0]
   SOURCE = "intent_records".freeze
 
   def up
-    # contentless-delete: the text lives in intent_records and the index stores
-    # only the terms, so the store does not carry a second copy of every body.
+    # An external-content table: the text lives in intent_records and the index
+    # stores only the terms, so the store does not carry a second copy of every
+    # body.
     execute(<<~SQL)
       CREATE VIRTUAL TABLE #{TABLE} USING fts5(
         summary, body,

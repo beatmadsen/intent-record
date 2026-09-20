@@ -12,7 +12,7 @@ module IntentRecord
         by-source <uri> [--contains]    Intents linked to a stakeholder uri (Jira ticket, Confluence page, ...)
         recent [--limit N]              Newest intents first
         systems                         Known vcs and stakeholder system names
-        blame [--format name]           Intents for the commits a blame output names (JSON via stdin)
+        blame [--format git-porcelain]  Intents for the commits a blame output names (JSON via stdin)
         backfill [options]              Recover intents from commit messages (JSON via stdin, see below)
         serve [--port N]                Start the local web GUI
 

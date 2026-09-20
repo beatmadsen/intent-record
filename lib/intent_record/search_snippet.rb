@@ -33,10 +33,16 @@ module IntentRecord
       shortened(body.to_s)
     end
 
+    # Cut at the last space where there is one, so the reader is not shown a
+    # fragment of a word. Japanese and Chinese prose has no spaces, and neither
+    # does a long url or a hash, and a cut that found no space and kept nothing
+    # showed an ellipsis on its own.
     def shortened(body)
       return body if body.length <= FALLBACK_LENGTH
 
-      "#{body[0, FALLBACK_LENGTH].rpartition(/\s/).first.rstrip}#{ELLIPSIS}"
+      cut = body[0, FALLBACK_LENGTH]
+      at_word = cut.rpartition(/\s/).first.rstrip
+      "#{at_word.empty? ? cut : at_word}#{ELLIPSIS}"
     end
 
     private_class_method :shortened

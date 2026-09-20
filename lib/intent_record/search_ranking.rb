@@ -48,8 +48,9 @@ module IntentRecord
     # a hint, since ActiveRecord renders no MATERIALIZED for a CTE.
     #
     # The terms are left as a placeholder rather than pasted in, so building
-    # this needs no connection and the one value that came from the user is
-    # bound.
+    # this needs no connection. The caller fills it through sanitize_sql_array,
+    # which quotes the one value that came from the user before it reaches the
+    # query text.
     JOIN = <<~SQL.squish.freeze
       LEFT JOIN (
         SELECT rowid AS indexed_id,

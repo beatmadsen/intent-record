@@ -20,7 +20,8 @@ module IntentRecord
       # and the store is not asked about it at all: the id is a valid shape, so
       # a record can sit under it, and one did, but a line with no history cannot
       # have had anything recorded against it.
-      UNCOMMITTED = ("0" * 40).freeze
+      # Forty zeros, or sixty-four in a repository using the sha256 object format.
+      UNCOMMITTED = /\A(?:0{40}|0{64})\z/
 
       def call(input)
         vcs = AssetVersionNormalizer.vcs_name(input["vcs"] || DEFAULT_VCS)
@@ -50,7 +51,7 @@ module IntentRecord
       end
 
       def uncommitted?(span, vcs)
-        vcs == DEFAULT_VCS && span.external_id == UNCOMMITTED
+        vcs == DEFAULT_VCS && UNCOMMITTED.match?(span.external_id)
       end
 
       def intents(version)

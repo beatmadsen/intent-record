@@ -6,9 +6,13 @@ module IntentRecord
   # each term makes it a phrase, which is the only form that carries whatever the
   # user typed through the parser unread.
   #
-  # Phrases are joined with OR because this expression ranks rather than filters.
-  # Which records match is settled before FTS5 is asked, so a term that narrowed
-  # the match here would rank a record it was not asked about at zero.
+  # Phrases are joined with OR. The expression is used twice, and OR is right
+  # for both: SearchMembership asks the index one term at a time, so an
+  # expression there holds a single phrase and the joiner never applies; and
+  # SearchRanking asks it about every term at once, where a record is scored on
+  # whichever terms it holds rather than dropped for lacking one, because which
+  # records answer has already been settled and AND would score some of them at
+  # nothing.
   module MatchExpression
     JOINER = " OR ".freeze
     QUOTE = '"'.freeze

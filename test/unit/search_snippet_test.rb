@@ -34,11 +34,24 @@ class SearchSnippetTextTest < Minitest::Test
   end
 
   # Cutting mid-word gives the reader a fragment of a word, which reads as a
-  # typo rather than as a cut.
+  # typo rather than as a cut. Distinct words, so a cut inside one is a word
+  # that was never in the body; a body of one repeated word cannot tell.
   def test_a_body_is_cut_at_a_word_boundary
-    cut = Subject.text(indexed: nil, body: "word " * 200).delete_suffix("…")
+    words = %w[alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima]
+    body = Array.new(60) { |i| words[i % words.size] }.join(" ")
 
-    assert_equal cut.rstrip, cut.rstrip.split.join(" ")
+    cut = Subject.text(indexed: nil, body: body).delete_suffix("…")
+
+    assert_includes words, cut.split.last
+  end
+
+  # Japanese and Chinese prose has no spaces, and so does a long url or a hash.
+  # A cut that looks for a word boundary and finds none must still show the
+  # text, not an ellipsis on its own.
+  def test_a_body_with_no_spaces_is_still_shown
+    text = Subject.text(indexed: nil, body: "字" * 300)
+
+    assert_equal "#{"字" * Subject::FALLBACK_LENGTH}…", text
   end
 
   def test_a_short_body_is_left_whole_and_unmarked
@@ -64,6 +77,6 @@ class SearchSnippetBoundaryTest < Minitest::Test
   def test_a_body_one_character_past_the_limit_is_cut
     text = Subject.text(indexed: nil, body: body_of(Subject::FALLBACK_LENGTH + 1))
 
-    refute_equal body_of(Subject::FALLBACK_LENGTH + 1), text
+    assert_equal "#{body_of(Subject::FALLBACK_LENGTH)}…", text
   end
 end

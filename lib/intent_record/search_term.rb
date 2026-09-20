@@ -26,8 +26,11 @@ module IntentRecord
       named(match[1].downcase, match[2])
     end
 
+    # The shell hands `uri: acme-42` over as one word with the space inside,
+    # and the space is not part of what is being looked for.
     def self.named(name, text)
-      raise ValidationError, "#{name}: needs something to look for" if text.strip.empty?
+      text = text.strip
+      raise ValidationError, "#{name}: needs something to look for" if text.empty?
 
       new(text: text, fields: [FIELDS.fetch(name)], index_column: RECORD_FIELDS.key?(name) ? name : nil)
     end

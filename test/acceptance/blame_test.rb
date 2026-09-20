@@ -120,6 +120,14 @@ class BlamePorcelainFormatTest < Minitest::Test
     assert_empty span["intents"]
   end
 
+  # In a repository using the sha256 object format the marker is 64 zeros.
+  def test_an_uncommitted_line_in_a_sha256_repository_is_said_to_be_uncommitted
+    span = run_cli_ok!("blame", "--format", "git-porcelain",
+                       stdin: porcelain(["0" * 64, 3])).fetch("spans").sole
+
+    assert span["uncommitted"], "expected the 64-zero id to be read as uncommitted"
+  end
+
   def test_a_committed_line_is_not_called_uncommitted
     span = run_cli_ok!("blame", "--format", "git-porcelain",
                        stdin: porcelain([SHA, 7])).fetch("spans").sole

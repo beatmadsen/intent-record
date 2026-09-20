@@ -66,6 +66,17 @@ class BlameSpansTest < Minitest::Test
     assert_raises(IntentRecord::ValidationError) { spans([["forty", FIRST]]) }
   end
 
+  # Ruby's Integer() reads a leading zero as octal and 0x as hex, so "010" would
+  # be answered as line 8: a wrong answer given confidently, which is worse
+  # than a refusal. A number given as a string is read in base ten.
+  def test_a_line_number_with_a_leading_zero_is_read_in_base_ten
+    assert_equal [[10, 10]], ranges([["010", FIRST]])
+  end
+
+  def test_a_fractional_line_number_is_refused_rather_than_truncated
+    assert_raises(IntentRecord::ValidationError) { spans([[3.9, FIRST]]) }
+  end
+
   def test_a_line_number_below_one_is_refused
     assert_raises(IntentRecord::ValidationError) { spans([[0, FIRST]]) }
   end

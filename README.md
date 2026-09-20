@@ -68,7 +68,7 @@ JSON in on stdin where input is needed, JSON out on stdout, exit code 0 on succe
 | `by-source <uri> [--contains]` | Intents linked to a stakeholder source, plus the distinct commits across them. `--contains` matches a substring such as a ticket key |
 | `recent [--limit N]` | Newest intents first |
 | `systems` | Known VCS and stakeholder system names |
-| `blame <options>` | Intents for the commits a blame output names, answered as spans of lines (JSON via stdin) |
+| `blame [--format git-porcelain]` | Intents for the commits a blame output names, answered as spans of lines (JSON via stdin, or `git blame --porcelain` output with `--format git-porcelain`) |
 | `backfill` | Recover intent records from a history of commit messages (JSON via stdin) |
 | `serve [--port N]` | Start the web GUI on 127.0.0.1 (default port 4791) |
 
@@ -97,9 +97,9 @@ An intent can be recorded before the commit exists and linked with `attach` afte
 ## Searching
 
 Results come back most relevant first, not newest first, with a term in a summary
-counting for more than the same term somewhere in a long body. Each result carries
-the fragment of the body its terms landed in, so a page of hits is readable without
-opening any of them.
+counting for more than the same term somewhere in a long body. Each result carries a
+`snippet`: the part of the body the terms landed in, or the opening of the body when
+the match was a literal one, so a page of hits is readable without opening any of them.
 
 ```bash
 intent-record search retry backoff            # either word
@@ -110,7 +110,7 @@ intent-record search "retry the fetch"         # the words in that order
 A plain word also matches the other forms of itself, so `retry` finds a record that
 said `retried`. A term carrying punctuation is matched as the literal you typed:
 `100%` does not match "100 percent", and `ACME-4` still finds `ACME-42` the way a
-substring search does. That split is why a ticket key works as a search term.
+substring search does.
 
 A term can name one field, for when a common word turns up everywhere:
 
@@ -118,8 +118,8 @@ A term can name one field, for when a common word turns up everywhere:
 intent-record search summary:retry    # summary, body, uri or title
 ```
 
-Only those four names count as a name, so a ticket URL is searched as itself
-rather than read as a field called `https`.
+Only those four names count, so a ticket URL is searched as itself rather than read
+as a field called `https`.
 
 ## Why is this line here
 
@@ -148,13 +148,12 @@ lines from the same change collapse into a span:
 ]}
 ```
 
-A change nothing was recorded against still gets a span, with no intents. Leaving it
-out would read as "this line has no history", which is a different answer. A line you
+A change nothing was recorded against still gets a span, with no intents. A line you
 have edited but not committed is marked `uncommitted`, because there was never
 anything to record against it.
 
-The same change appearing twice in a file with someone else's edit between is two
-spans, not one, so a span never claims a line it does not own.
+The same change appearing twice in a file with someone else's edit between is
+answered as two spans.
 
 ### Other version control systems
 

@@ -39,6 +39,13 @@ class BlamePorcelainTest < Minitest::Test
     assert_equal [{ "line" => 1, "external_id" => SHA }], lines("#{SHA} 1 1 2\nboundary\n\tcode\n")
   end
 
+  # A repository created with the sha256 object format prints 64-character ids.
+  def test_a_sixty_four_character_id_is_read
+    id = "f" * 64
+
+    assert_equal [{ "line" => 2, "external_id" => id }], lines("#{id} 2 2 1\n\tcode\n")
+  end
+
   def test_each_commit_keeps_its_own_lines
     text = "#{SHA} 1 1 1\n\ta\n#{OTHER} 1 2 1\n\tb\n"
 

@@ -40,17 +40,29 @@ class SearchFieldTest < Minitest::Test
 
   # The hazard this feature brings with it. A ticket URL has a colon in it and
   # would be read as a field named `https` unless only the known names count.
+  # Each has a decoy that the remainder after the colon would match on its own,
+  # so an implementation that dropped an unknown name and searched the rest
+  # would answer with two records and fail here.
   def test_a_term_that_merely_contains_a_colon_is_not_read_as_a_field
     refs = [{ "system" => "jira", "uri" => "https://j/browse/ACME-42" }]
     hit = record_intent!(summary: "Nothing telling", body: "b", stakeholder_references: refs)
+    record_intent!(summary: "Mentions //j/browse/ACME-42 without the scheme", body: "b")
 
     assert_equal([hit["intent_id"]], found("https://j/browse/ACME-42"))
   end
 
   def test_an_unknown_name_before_a_colon_is_part_of_the_term
     hit = record_intent!(summary: "Wrote author:erik in the summary", body: "b")
+    record_intent!(summary: "Mentions erik alone", body: "b")
 
     assert_equal([hit["intent_id"]], found("author:erik"))
+  end
+
+  def test_a_space_after_the_field_name_does_not_stop_the_term_matching
+    refs = [{ "system" => "jira", "uri" => "https://j/browse/ACME-42" }]
+    hit = record_intent!(summary: "Nothing telling", body: "b", stakeholder_references: refs)
+
+    assert_equal([hit["intent_id"]], found("uri: acme-42"))
   end
 
   def test_naming_a_field_with_nothing_to_look_for_is_refused

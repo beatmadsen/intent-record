@@ -33,6 +33,13 @@ class SearchTermTest < Minitest::Test
     assert_equal "retry", parse("Summary:retry").text
   end
 
+  # The shell hands `uri: acme-42` over as one word with the space inside it.
+  # The space is not part of what the person is looking for, and left in it
+  # binds a substring pattern that begins with a space and matches nothing.
+  def test_space_after_the_name_is_not_part_of_the_text
+    assert_equal "acme-42", parse("uri: acme-42").text
+  end
+
   def test_naming_the_body_narrows_the_fields_to_it
     assert_equal ["intent_records.body"], parse("body:retry").fields
   end
