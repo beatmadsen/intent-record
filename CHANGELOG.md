@@ -6,6 +6,18 @@ Notable changes, one section per released version. The format follows
 
 ## Unreleased
 
+### Added
+
+- `blame`, which answers "why is this line here" for a range of lines. Blame output goes in on stdin, so the tool still never shells out to git and the same command works for Perforce or Mercurial. `--format git-porcelain` reads what `git blame --porcelain` prints, so the common case is one command.
+- Neighbouring lines from one change are answered once, as a span. A change the store has never heard of still gets a span, with no intents, and a line you have edited but not committed is marked `uncommitted`.
+- A search term can name one field: `summary:retry`, `body:retry`, `uri:ACME-42`, `title:flaky`. Only those four names count, so a ticket url is still searched as itself.
+
+### Changed
+
+- Search answers most relevant first rather than newest first, with a term in a summary counting for more than the same term in a long body. Each result carries the fragment of the body its terms landed in, and the GUI's search page shows that instead of every body in full.
+- A plain search word now also matches the other forms of itself, so `retry` finds a record that said `retried`. A term carrying punctuation is still matched as the literal you typed, so `100%` does not match "100 percent" and `ACME-4` still finds `ACME-42`.
+- Upgrading indexes the records a store already holds, so ranking works on existing history from the first run rather than only on what is recorded afterwards.
+
 ## 1.1.0 - 2026-09-19
 
 ### Added
