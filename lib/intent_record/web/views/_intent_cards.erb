@@ -11,7 +11,9 @@
         · <code class="id"><%= h r["intent_id"] %></code>
       </div>
     </header>
-    <div class="body"><%= h r["body"] %></div>
+    <%# A search result carries the fragment its terms landed in; every other
+        page shows one record, where the body is what the reader came for. %>
+    <div class="body"><%= h(r["snippet"] || r["body"]) %></div>
     <% if r["asset_versions"].any? %>
       <div class="links">
         <span class="label">Commits</span>

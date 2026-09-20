@@ -1,6 +1,7 @@
 require_relative "../formatter"
 require_relative "../search_membership"
 require_relative "../search_ranking"
+require_relative "../search_snippet"
 require_relative "../models/intent_record"
 
 module IntentRecord
@@ -25,20 +26,38 @@ module IntentRecord
         raise ValidationError, "At least one search term is required" if @terms.empty?
         raise ValidationError, "--match must be any or all" unless MATCH_MODES.include?(@match)
 
-        { "intents" => matching_records.map { |r| Formatter.full(r) } }
+        { "intents" => matching_records.map { |r| formatted(r) } }
       end
 
       private
+
+      # The snippet belongs to the search rather than to the record, so it is
+      # merged here instead of in Formatter, which every other command shares.
+      def formatted(record)
+        snippet = SearchSnippet.text(indexed: record[SearchSnippet::COLUMN], body: record.body)
+        Formatter.full(record).merge(SearchSnippet::COLUMN => snippet)
+      end
 
       def matching_records
         Formatter.preloaded(ranked(matching_scope))
       end
 
       def matching_scope
-        Models::IntentRecord.left_joins(:stakeholder_sources)
+        Models::IntentRecord.select(selection)
+                            .left_joins(:stakeholder_sources)
                             .group("intent_records.id")
                             .having(*SearchMembership.new(terms: @terms, match: @match).condition)
                             .limit(LIMIT)
+      end
+
+      # The record's own columns plus the fragment the index found, which is null
+      # for a record the index could not match and is filled in from the body.
+      def selection
+        expression = SearchRanking.expression_for(@terms)
+        return "intent_records.*" if expression.nil?
+
+        snippet = Models::IntentRecord.sanitize_sql_array([SearchSnippet::TEMPLATE, expression])
+        Arel.sql("intent_records.*, #{snippet} AS #{SearchSnippet::COLUMN}")
       end
 
       # Terms that hold no searchable token leave nothing to rank, and an empty
