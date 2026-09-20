@@ -63,3 +63,34 @@ class SearchStemmingTest < Minitest::Test
     assert_equal([hit["intent_id"]], found("done_now"))
   end
 end
+
+# A term is one argv word, so the shell's own quoting is what asks for a phrase.
+# Nothing in the CLI parses quotes, and these say the behaviour that falls out of
+# that is the behaviour a person quoting a phrase expects.
+class SearchPhraseTest < Minitest::Test
+  include IntentRecordDsl
+
+  def found(*argv)
+    run_cli_ok!("search", *argv)["intents"].map { |r| r["intent_id"] }
+  end
+
+  def test_a_quoted_phrase_matches_the_words_in_that_order
+    hit = record_intent!(summary: "Retry the fetch on failure", body: "b")
+
+    assert_equal([hit["intent_id"]], found("retry the fetch"))
+  end
+
+  def test_a_quoted_phrase_does_not_match_the_same_words_apart
+    record_intent!(summary: "Retry it, then fetch again", body: "b")
+
+    assert_empty found("retry the fetch")
+  end
+
+  # The words are still stemmed inside a phrase, so the phrase does not have to
+  # be quoted in the form the writer happened to use.
+  def test_a_quoted_phrase_matches_another_form_of_its_words
+    hit = record_intent!(summary: "Nothing telling", body: "We retried the fetches twice.")
+
+    assert_equal([hit["intent_id"]], found("retry the fetch"))
+  end
+end
