@@ -1,4 +1,5 @@
 require_relative "../blame/spans"
+require_relative "../blame/porcelain"
 require_relative "../asset_version_normalizer"
 require_relative "../formatter"
 require_relative "../models/asset_version"
@@ -12,6 +13,11 @@ module IntentRecord
     # knowing nothing about which repository a commit belongs to.
     class Blame
       DEFAULT_VCS = "git".freeze
+
+      # Git's all-zero object id, which blame gives a line that is in the working
+      # copy and not in the history. It is not a commit, so a reader is told the
+      # line is not committed rather than that nothing was recorded against it.
+      UNCOMMITTED = ("0" * 40).freeze
 
       def call(input)
         vcs = AssetVersionNormalizer.vcs_name(input["vcs"] || DEFAULT_VCS)
@@ -31,12 +37,17 @@ module IntentRecord
       # heard of. Leaving it out would read as "this line has no history", which
       # is the opposite of what an empty list of intents says.
       def answer(span, vcs, version)
-        {
+        answered = {
           "from" => span.from,
           "to" => span.to,
           "asset_version" => { "vcs" => vcs, "external_id" => span.external_id },
           "intents" => intents(version)
         }
+        uncommitted?(span, vcs) ? answered.merge("uncommitted" => true) : answered
+      end
+
+      def uncommitted?(span, vcs)
+        vcs == DEFAULT_VCS && span.external_id == UNCOMMITTED
       end
 
       def intents(version)

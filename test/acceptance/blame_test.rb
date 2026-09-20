@@ -68,3 +68,59 @@ class BlameTest < Minitest::Test
     assert_equal "perforce", span.dig("asset_version", "vcs")
   end
 end
+
+# Reading `git blame --porcelain` straight through, so that blaming a file from
+# a git repository is one command rather than one command and a converter.
+class BlamePorcelainFormatTest < Minitest::Test
+  include IntentRecordDsl
+
+  SHA = "d88d771a9870e616fb425c6c50b3e9de9e732d31".freeze
+  UNCOMMITTED = ("0" * 40).freeze
+
+  def porcelain(*entries)
+    entries.map { |id, line| "#{id} #{line} #{line} 1\nfilename f.rb\n\tsome code\n" }.join
+  end
+
+  def test_porcelain_output_is_answered_like_the_json_shape
+    intent = record_intent!(summary: "Retry flaky fetches", commits: [SHA])
+
+    span = run_cli_ok!("blame", "--format", "git-porcelain",
+                       stdin: porcelain([SHA, 7])).fetch("spans").sole
+
+    assert_equal([intent["intent_id"]], span["intents"].map { |i| i["intent_id"] })
+  end
+
+  def test_porcelain_lines_are_collapsed_into_spans_too
+    spans = run_cli_ok!("blame", "--format", "git-porcelain",
+                        stdin: porcelain([SHA, 7], [SHA, 8])).fetch("spans")
+
+    assert_equal([{ "from" => 7, "to" => 8 }], spans.map { |s| s.slice("from", "to") })
+  end
+
+  # Anyone blaming a file they are editing meets this on the first try. Answering
+  # "no intent recorded" would be a different and wrong answer: the line is not
+  # in the history at all, so there was never anything to record.
+  def test_a_line_that_is_not_committed_yet_is_said_to_be_uncommitted
+    span = run_cli_ok!("blame", "--format", "git-porcelain",
+                       stdin: porcelain([UNCOMMITTED, 3])).fetch("spans").sole
+
+    assert span["uncommitted"], "expected the span to say the line is not committed"
+  end
+
+  def test_a_committed_line_is_not_called_uncommitted
+    span = run_cli_ok!("blame", "--format", "git-porcelain",
+                       stdin: porcelain([SHA, 7])).fetch("spans").sole
+
+    refute span["uncommitted"]
+  end
+
+  def test_an_unknown_format_is_refused
+    assert_cli_rejected run_cli("blame", "--format", "sideways", stdin: porcelain([SHA, 7])),
+                        matching: /format/
+  end
+
+  def test_output_that_is_not_blame_output_is_refused
+    assert_cli_rejected run_cli("blame", "--format", "git-porcelain", stdin: "hello\n"),
+                        matching: /blame/
+  end
+end

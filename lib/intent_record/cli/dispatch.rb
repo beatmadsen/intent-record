@@ -12,6 +12,7 @@ require_relative "../commands/attach"
 require_relative "../commands/systems"
 require_relative "../commands/backfill"
 require_relative "../commands/blame"
+require_relative "../blame/porcelain"
 
 module IntentRecord
   class CLI
@@ -19,6 +20,10 @@ module IntentRecord
     # Each run_* parses argv fully, then `finish!` rejects anything left over before running.
     class Dispatch
       HANDLER_PREFIX = "run_".freeze
+
+      # For `blame`. The JSON shape is the contract; a format names a reader that
+      # produces it from what some blame tool already prints.
+      FORMATS = { "git-porcelain" => Blame::Porcelain }.freeze
 
       # The commands there are, taken from the handlers that implement them, so
       # the list cannot fall behind what the dispatch actually answers to.
@@ -124,7 +129,17 @@ module IntentRecord
       end
 
       def run_blame
-        finish! { Commands::Blame.new.call(stdin_json) }
+        format = @parser.take_flag("--format")
+        finish! { Commands::Blame.new.call(blame_input(format)) }
+      end
+
+      def blame_input(format)
+        return stdin_json if format.nil?
+
+        reader = FORMATS[format]
+        raise ValidationError, "Unknown --format #{format}. Known formats: #{FORMATS.keys.join(", ")}" if reader.nil?
+
+        { "lines" => reader.lines(@streams.stdin.read) }
       end
 
       def run_systems

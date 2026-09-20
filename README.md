@@ -7,6 +7,7 @@ Local records storage for the intent behind individual code changes.
 
 A commit message says what changed. The intent record says why: what the agent (or person) was trying to achieve, which ticket or design page asked for it, and which earlier change it builds on. intent-record stores that in a local SQLite database, links it to the commit hash, and answers the questions people and agents ask later.
 
+- "Why is this line here?" (`git blame --porcelain f.rb | intent-record blame --format git-porcelain`)
 - "What was this commit for?" (`lookup <hash>`)
 - "What did we build for this Jira ticket, and why that way?" (`by-source <url-or-key>`)
 - "Have we touched retry logic before, and what were we thinking?" (`search retry`)
@@ -46,6 +47,9 @@ intent-record lookup 8f3a1c2
 # Or comes at it from the ticket
 intent-record by-source ACME-42 --contains
 
+# Or is staring at one line of a file and wants to know why it is there
+git blame --porcelain lib/fetch.rb | intent-record blame --format git-porcelain
+
 # Or wants to read it in a browser
 intent-record serve
 ```
@@ -60,7 +64,7 @@ JSON in on stdin where input is needed, JSON out on stdout, exit code 0 on succe
 | `attach <intent_id>` | Link more commits, stakeholder references or related intents to an existing record (JSON via stdin) |
 | `show <intent_id>` | Full intent record with commits, stakeholder links and related intents |
 | `lookup <commit> [--vcs name]` | All intents recorded against a commit. Accepts a full hash or a unique prefix of at least 4 characters. Ids are unique per system, not across them, so an id recorded in two systems is reported as ambiguous; name one with `--vcs` |
-| `search <terms...> [--match all]` | Case-insensitive substring search over summary, body, and linked stakeholder URIs and titles, so a ticket key finds its intents |
+| `search <terms...> [--match all]` | Search over summary, body, and linked stakeholder URIs and titles, most relevant first, so a ticket key finds its intents |
 | `by-source <uri> [--contains]` | Intents linked to a stakeholder source, plus the distinct commits across them. `--contains` matches a substring such as a ticket key |
 | `recent [--limit N]` | Newest intents first |
 | `systems` | Known VCS and stakeholder system names |
@@ -89,6 +93,71 @@ Options take either `--name value` or `--name=value`. Unknown options and stray 
 `record` and `attach` both return the full intent record. A record's commits, stakeholder references and related intents come back in the order they were attached.
 
 An intent can be recorded before the commit exists and linked with `attach` afterwards. This also covers rebases and squashes, where the same intent ends up on a new hash. One commit can carry several intents and one intent can span several commits.
+
+## Searching
+
+Results come back most relevant first, not newest first, with a term in a summary
+counting for more than the same term somewhere in a long body. Each result carries
+the fragment of the body its terms landed in, so a page of hits is readable without
+opening any of them.
+
+```bash
+intent-record search retry backoff            # either word
+intent-record search retry backoff --match all # both
+intent-record search "retry the fetch"         # the words in that order
+```
+
+A plain word also matches the other forms of itself, so `retry` finds a record that
+said `retried`. A term carrying punctuation is matched as the literal you typed:
+`100%` does not match "100 percent", and `ACME-4` still finds `ACME-42` the way a
+substring search does. That split is why a ticket key works as a search term.
+
+## Why is this line here
+
+`lookup` answers for a commit, which means finding the commit first. That is three
+steps: run blame, copy the hash, look it up. `blame` does the whole thing.
+
+```bash
+git blame --porcelain lib/fetch.rb | intent-record blame --format git-porcelain
+git blame --porcelain -L 40,60 lib/fetch.rb | intent-record blame --format git-porcelain
+```
+
+The answer is one entry per change rather than one per line, because neighbouring
+lines from the same change collapse into a span:
+
+```json
+{"spans": [
+  {"from": 40, "to": 44,
+   "asset_version": {"vcs": "git", "external_id": "8f3a1c2d..."},
+   "intents": [{"intent_id": "EUt4WMY", "summary": "Retry flaky fetches with backoff", "...": "..."}]},
+  {"from": 45, "to": 45,
+   "asset_version": {"vcs": "git", "external_id": "b2c4e6f8..."},
+   "intents": []},
+  {"from": 46, "to": 46,
+   "asset_version": {"vcs": "git", "external_id": "0000000000..."},
+   "intents": [], "uncommitted": true}
+]}
+```
+
+A change nothing was recorded against still gets a span, with no intents. Leaving it
+out would read as "this line has no history", which is a different answer. A line you
+have edited but not committed is marked `uncommitted`, because there was never
+anything to record against it.
+
+The same change appearing twice in a file with someone else's edit between is two
+spans, not one, so a span never claims a line it does not own.
+
+### Other version control systems
+
+`--format git-porcelain` is a convenience. The contract is JSON, and any tool that
+can say which change a line came from can feed it:
+
+```bash
+echo '{"vcs": "perforce", "lines": [{"line": 40, "external_id": "12345"}]}' | intent-record blame
+```
+
+`vcs` defaults to `git`. Line numbers start at 1, and the same line given twice is
+rejected rather than answered from one of the two changes.
 
 ## Backfilling an existing repo
 
