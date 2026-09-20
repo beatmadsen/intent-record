@@ -26,7 +26,14 @@ class FormattingAListDoesNotQueryPerRecordTest < Minitest::Test
     assert_equal queries_for_lookup(1), queries_for_lookup(5)
   end
 
-  # The four above would pass just as well if nothing were formatted, or if the
+  # Here what grows is the range being asked about rather than the store. A
+  # blamed file names one change per span, so a query per span would make the
+  # cost grow with the size of the range a reader happened to ask for.
+  def test_blame_costs_the_same_number_of_queries_for_five_spans_as_for_one
+    assert_equal queries_for_blame(1), queries_for_blame(5)
+  end
+
+  # Those above would pass just as well if nothing were formatted, or if the
   # counter saw nothing, so both are checked.
   def test_every_seeded_record_is_formatted
     seed(3)
@@ -63,6 +70,14 @@ class FormattingAListDoesNotQueryPerRecordTest < Minitest::Test
   def queries_for_lookup(count)
     reset(count, commit: SHARED_COMMIT)
     queries_while { IntentRecord::Commands::Lookup.new(external_id: SHARED_COMMIT).call }.size
+  end
+
+  # Each line names a different commit, so the spans cannot collapse and the
+  # payload really does ask about `count` separate changes.
+  def queries_for_blame(count)
+    reset(count)
+    lines = (1..count).map { |n| { "line" => n, "external_id" => format("%040d", n) } }
+    queries_while { IntentRecord::Commands::Blame.new.call("lines" => lines) }.size
   end
 
   def reset(count, **shared)

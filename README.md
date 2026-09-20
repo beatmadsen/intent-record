@@ -64,6 +64,7 @@ JSON in on stdin where input is needed, JSON out on stdout, exit code 0 on succe
 | `by-source <uri> [--contains]` | Intents linked to a stakeholder source, plus the distinct commits across them. `--contains` matches a substring such as a ticket key |
 | `recent [--limit N]` | Newest intents first |
 | `systems` | Known VCS and stakeholder system names |
+| `blame <options>` | Intents for the commits a blame output names, answered as spans of lines (JSON via stdin) |
 | `backfill` | Recover intent records from a history of commit messages (JSON via stdin) |
 | `serve [--port N]` | Start the web GUI on 127.0.0.1 (default port 4791) |
 

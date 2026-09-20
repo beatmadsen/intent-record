@@ -15,6 +15,7 @@ class UnknownArgvTest < Minitest::Test
   ARGUMENTS = {
     "attach" => %w[zzzzzzz],
     "backfill" => ["--system", "jira", "--pattern", "ACME-\\d+"],
+    "blame" => [],
     "by-source" => %w[https://example.test/1],
     "lookup" => [HASH],
     "recent" => [],

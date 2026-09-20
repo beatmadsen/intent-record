@@ -12,6 +12,7 @@ module IntentRecord
         by-source <uri> [--contains]    Intents linked to a stakeholder uri (Jira ticket, Confluence page, ...)
         recent [--limit N]              Newest intents first
         systems                         Known vcs and stakeholder system names
+        blame [--format name]           Intents for the commits a blame output names (JSON via stdin)
         backfill [options]              Recover intents from commit messages (JSON via stdin, see below)
         serve [--port N]                Start the local web GUI
 
@@ -27,6 +28,10 @@ module IntentRecord
         --uri-prefix <url>              Prefix + key = source uri. Without it the whole match is the uri
         --order <which-first>           newest-first (default, as git log prints) or oldest-first
         --dry-run                       Report what it would write, write nothing
+
+      Input shape for blame (vcs defaults to git):
+        {"vcs": "git", "lines": [{"line": 40, "external_id": "<hash>"}]}
+        With --format git-porcelain, `git blame --porcelain` output goes in as-is.
 
       Input shape for backfill:
         {"commits": [{"commit": "<hash>", "message": "<commit message>",

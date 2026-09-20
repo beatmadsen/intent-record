@@ -11,6 +11,7 @@ require_relative "../commands/recent"
 require_relative "../commands/attach"
 require_relative "../commands/systems"
 require_relative "../commands/backfill"
+require_relative "../commands/blame"
 
 module IntentRecord
   class CLI
@@ -120,6 +121,10 @@ module IntentRecord
                                               order: @parser.take_flag("--order") ||
                                            Commands::Backfill::DEFAULT_ORDER)
         finish! { command.call(stdin_json) }
+      end
+
+      def run_blame
+        finish! { Commands::Blame.new.call(stdin_json) }
       end
 
       def run_systems
