@@ -32,25 +32,13 @@ module IntentRecord
     NO_MATCH_SCORE = 0.0
 
     # The relevance and the fragment for every record the terms match, computed
-    # once for the search and joined to the candidates.
-    #
-    # Once, not once per record, is the whole point of the shape. bm25 and
-    # snippet only evaluate where SQLite has kept the query's FTS context, and
-    # under the GROUP BY the membership needs, a plain join onto this subquery is
-    # flattened into the outer query and loses it. A correlated subquery keeps
-    # it but is planned as a scan of the whole match set for every candidate
-    # row: measured, eight seconds for a common word on twenty-five thousand
-    # records, against a quarter of a second for this.
-    #
-    # `LIMIT -1` is SQLite's "no limit" and is here only because a subquery with
-    # a LIMIT is one the flattener leaves alone, which the query plan reports as
-    # MATERIALIZE. It is the documented behaviour of the flattener rather than
-    # a hint, since ActiveRecord renders no MATERIALIZED for a CTE.
-    #
-    # The terms are left as a placeholder rather than pasted in, so building
-    # this needs no connection. The caller fills it through sanitize_sql_array,
-    # which quotes the one value that came from the user before it reaches the
-    # query text.
+    # once for the search and joined to the candidates. Once, not once per
+    # record: a correlated subquery measured eight seconds for a common word on
+    # twenty-five thousand records, this a quarter of a second. `LIMIT -1` is
+    # what keeps SQLite from flattening the subquery into the outer query, where
+    # bm25 and snippet lose their context; the plan reports it as MATERIALIZE,
+    # and SearchRankingPlanTest holds it there. The `?` is filled by the caller
+    # through sanitize_sql_array.
     JOIN = <<~SQL.squish.freeze
       LEFT JOIN (
         SELECT rowid AS indexed_id,

@@ -19,16 +19,17 @@ module IntentRecord
       LIMIT = 200
       MATCH_MODES = %w[any all].freeze
 
+      # Refuses bad input here, before the store is asked anything.
       def initialize(terms:, match: "any")
-        @raw = terms.map(&:strip).reject(&:empty?)
+        raw = terms.map(&:strip).reject(&:empty?)
+        raise ValidationError, "At least one search term is required" if raw.empty?
+        raise ValidationError, "--match must be any or all" unless MATCH_MODES.include?(match)
+
+        @terms = raw.map { |term| SearchTerm.parse(term) }
         @match = match
       end
 
       def call
-        raise ValidationError, "At least one search term is required" if @raw.empty?
-        raise ValidationError, "--match must be any or all" unless MATCH_MODES.include?(@match)
-
-        @terms = @raw.map { |term| SearchTerm.parse(term) }
         { "intents" => matching_records.map { |r| formatted(r) } }
       end
 

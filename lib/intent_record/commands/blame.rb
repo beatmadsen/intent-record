@@ -25,7 +25,6 @@ module IntentRecord
 
       def call(input)
         vcs = AssetVersionNormalizer.vcs_name(input["vcs"] || DEFAULT_VCS)
-        # Full path: inside Commands::Blame the bare name finds this class.
         spans = IntentRecord::Blame::Spans.new(input["lines"]).call
         { "spans" => answers(spans, vcs) }
       end

@@ -1,5 +1,3 @@
-require_relative "match_expression"
-
 module IntentRecord
   # One term a person typed, read into the fields it asks about and the text to
   # look for in them.
@@ -16,6 +14,12 @@ module IntentRecord
 
     # Case-insensitive, as every other name the tool takes is.
     NAMED = /\A(#{FIELDS.keys.join("|")}):(.*)\z/mi
+
+    # Text the index may be trusted with: letters, digits and the spaces between
+    # them, with at least one letter or digit to tokenise. Anything else the
+    # index would drop, and dropping punctuation is how `100%` comes to match a
+    # record that only ever said `100 percent`.
+    WORD = /\A(?=.*[[:alnum:]])[[:alnum:][:space:]]+\z/
 
     attr_reader :text, :fields, :index_column
 
@@ -44,11 +48,10 @@ module IntentRecord
       @off_index = index_column.nil? && fields != ALL_FIELDS
     end
 
-    # Whether the index may answer this term at all. A term carrying punctuation
-    # may not, because the index drops punctuation while tokenising and would
-    # match text the person did not ask for.
+    # Whether the index may answer this term at all: not for a field it does
+    # not hold, and not for text it would read differently from the person.
     def indexable?
-      !@off_index && MatchExpression.word?(text)
+      !@off_index && WORD.match?(text)
     end
 
     private_class_method :named
