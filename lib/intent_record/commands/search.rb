@@ -45,21 +45,10 @@ module IntentRecord
       end
 
       def matching_scope
-        Models::IntentRecord.select(selection)
-                            .left_joins(:stakeholder_sources)
+        Models::IntentRecord.left_joins(:stakeholder_sources)
                             .group("intent_records.id")
                             .having(*SearchMembership.new(terms: @terms, match: @match).condition)
                             .limit(LIMIT)
-      end
-
-      # The record's own columns plus the fragment the index found, which is null
-      # for a record the index could not match and is filled in from the body.
-      def selection
-        expression = SearchRanking.expression_for(indexable)
-        return "intent_records.*" if expression.nil?
-
-        snippet = Models::IntentRecord.sanitize_sql_array([SearchSnippet::TEMPLATE, expression])
-        Arel.sql("intent_records.*, #{snippet} AS #{SearchSnippet::COLUMN}")
       end
 
       # Only the terms the index may answer rank anything. A term it may not be
@@ -70,13 +59,16 @@ module IntentRecord
       end
 
       # Terms that hold no searchable token leave nothing to rank, and an empty
-      # MATCH is a syntax error rather than an expression matching nothing.
+      # MATCH is a syntax error rather than an expression matching nothing. With
+      # nothing to rank there is no fragment either, and the body stands in.
       def ranked(scope)
         expression = SearchRanking.expression_for(indexable)
         return scope.order(Arel.sql(SearchRanking::TIE_BREAK)) if expression.nil?
 
-        order = Models::IntentRecord.sanitize_sql_array([SearchRanking.order_template, expression])
-        scope.order(Arel.sql(order))
+        join = Models::IntentRecord.sanitize_sql_array([SearchRanking.join_template, expression])
+        scope.select("intent_records.*, #{SearchRanking::ALIAS}.#{SearchSnippet::COLUMN} AS #{SearchSnippet::COLUMN}")
+             .joins(join)
+             .order(Arel.sql(SearchRanking.order_sql))
       end
     end
   end

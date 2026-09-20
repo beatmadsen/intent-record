@@ -1,4 +1,5 @@
 require_relative "match_expression"
+require_relative "search_snippet"
 
 module IntentRecord
   # The order a search answers in.
@@ -14,6 +15,7 @@ module IntentRecord
   # can, which is the right place for a hit the terms only touch as a substring.
   module SearchRanking
     TABLE = "intent_search".freeze
+    ALIAS = "ranking".freeze
 
     # Weights per indexed column, in the order the index declares them. A term in
     # a one-line summary is a stronger signal than the same term somewhere in a
@@ -29,23 +31,44 @@ module IntentRecord
 
     NO_MATCH_SCORE = 0.0
 
-    # The terms are left as a placeholder rather than pasted in, so building this
-    # needs no connection and the one value that came from the user is bound.
-    RELEVANCE = <<~SQL.squish.freeze
-      (SELECT bm25(#{TABLE}, #{SUMMARY_WEIGHT}, #{BODY_WEIGHT}) FROM #{TABLE}
-       WHERE #{TABLE} MATCH ? AND #{TABLE}.rowid = intent_records.id)
+    # The relevance and the fragment for every record the terms match, computed
+    # once for the search and joined to the candidates.
+    #
+    # Once, not once per record, is the whole point of the shape. bm25 and
+    # snippet only evaluate where SQLite has kept the query's FTS context, and
+    # under the GROUP BY the membership needs, a plain join onto this subquery is
+    # flattened into the outer query and loses it. A correlated subquery keeps
+    # it but is planned as a scan of the whole match set for every candidate
+    # row: measured, eight seconds for a common word on twenty-five thousand
+    # records, against a quarter of a second for this.
+    #
+    # `LIMIT -1` is SQLite's "no limit" and is here only because a subquery with
+    # a LIMIT is one the flattener leaves alone, which the query plan reports as
+    # MATERIALIZE. It is the documented behaviour of the flattener rather than
+    # a hint, since ActiveRecord renders no MATERIALIZED for a CTE.
+    #
+    # The terms are left as a placeholder rather than pasted in, so building
+    # this needs no connection and the one value that came from the user is
+    # bound.
+    JOIN = <<~SQL.squish.freeze
+      LEFT JOIN (
+        SELECT rowid AS indexed_id,
+               bm25(#{TABLE}, #{SUMMARY_WEIGHT}, #{BODY_WEIGHT}) AS relevance,
+               #{SearchSnippet::EXPRESSION} AS #{SearchSnippet::COLUMN}
+        FROM #{TABLE} WHERE #{TABLE} MATCH ? LIMIT -1
+      ) AS #{ALIAS} ON #{ALIAS}.indexed_id = intent_records.id
     SQL
+
+    ORDER = "COALESCE(#{ALIAS}.relevance, #{NO_MATCH_SCORE}) ASC, #{TIE_BREAK}".freeze
 
     module_function
 
-    # A correlated subquery rather than a join, because bm25 only works where
-    # SQLite has kept the query's FTS context. Measured on SQLite 3.53.2: a
-    # LEFT JOIN onto the index, a join onto a subquery over it, and a plain CTE
-    # all fail with "unable to use function bm25 in the requested context" once
-    # the outer query groups, because SQLite flattens them. A CTE marked
-    # MATERIALIZED survives, but ActiveRecord renders no such hint.
-    def order_template
-      "COALESCE(#{RELEVANCE}, #{NO_MATCH_SCORE}) ASC, #{TIE_BREAK}"
+    def join_template
+      JOIN
+    end
+
+    def order_sql
+      ORDER
     end
 
     def expression_for(terms)

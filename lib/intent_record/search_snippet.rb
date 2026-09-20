@@ -1,5 +1,3 @@
-require_relative "search_ranking"
-
 module IntentRecord
   # What a search result shows instead of the whole body.
   #
@@ -21,11 +19,9 @@ module IntentRecord
     # Marks are left empty deliberately. A fragment with `[` and `]` around the
     # match reads as punctuation the writer typed, and a fragment with HTML in it
     # is either escaped into visible markup or trusted, and neither is wanted.
-    TEMPLATE = <<~SQL.squish.freeze
-      (SELECT snippet(#{SearchRanking::TABLE}, 1, '', '', '#{ELLIPSIS}', #{INDEX_TOKENS})
-       FROM #{SearchRanking::TABLE}
-       WHERE #{SearchRanking::TABLE} MATCH ? AND #{SearchRanking::TABLE}.rowid = intent_records.id)
-    SQL
+    # Column 1 is the body. Evaluated inside SearchRanking's subquery, which is
+    # the one place a search still holds the index's context.
+    EXPRESSION = "snippet(intent_search, 1, '', '', '#{ELLIPSIS}', #{INDEX_TOKENS})".freeze
 
     COLUMN = "snippet".freeze
 
