@@ -13,7 +13,17 @@ module IntentRecord
     JOINER = " OR ".freeze
     QUOTE = '"'.freeze
 
+    # A term the index may be trusted with: letters, digits and the spaces
+    # between them, and at least one letter or digit to tokenise. Anything else
+    # the index would drop, and dropping punctuation is how `100%` comes to
+    # match a record that only ever said `100 percent`.
+    WORD = /\A(?=.*[[:alnum:]])[[:alnum:][:space:]]+\z/
+
     module_function
+
+    def word?(term)
+      WORD.match?(term.to_s)
+    end
 
     def for(terms)
       phrases = terms.map { |term| phrase(term) }.compact

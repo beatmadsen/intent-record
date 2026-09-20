@@ -35,3 +35,41 @@ class MatchExpressionTest < Minitest::Test
     assert_nil Subject.for([])
   end
 end
+
+# Which terms the index is allowed to answer for at all.
+#
+# The index tokenises, so it drops punctuation: `100%` is indexed as `100` and
+# would match a record that only ever said `100 percent`. Measured, so is
+# `done_now` against `done now`. A term carrying punctuation is therefore a term
+# the index cannot be trusted with, and substring matching keeps it literal.
+class MatchExpressionWordTermsTest < Minitest::Test
+  Subject = IntentRecord::MatchExpression
+
+  def test_a_plain_word_may_be_answered_by_the_index
+    assert Subject.word?("retrying")
+  end
+
+  def test_a_word_with_digits_may_be_answered_by_the_index
+    assert Subject.word?("sha256")
+  end
+
+  # Several words are still words. The index reads them as a phrase, which is
+  # the same thing the substring match asks for.
+  def test_a_run_of_words_may_be_answered_by_the_index
+    assert Subject.word?("retry the fetch")
+  end
+
+  def test_a_non_ascii_word_may_be_answered_by_the_index
+    assert Subject.word?("ünïcödé")
+  end
+
+  def test_a_term_carrying_punctuation_may_not_be
+    refute Subject.word?("100%")
+    refute Subject.word?("done_now")
+    refute Subject.word?("acme-42")
+  end
+
+  def test_a_term_with_no_letters_or_digits_may_not_be
+    refute Subject.word?("---")
+  end
+end
