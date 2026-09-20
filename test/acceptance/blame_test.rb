@@ -58,6 +58,17 @@ class BlameTest < Minitest::Test
     assert_equal FIRST, span.dig("asset_version", "external_id")
   end
 
+  # One commit can carry several intents, and a reader walks them as a story.
+  # Oldest first, the order `lookup` answers in.
+  def test_several_intents_on_one_commit_are_answered_oldest_first
+    first = record_intent!(summary: "First reasoning", commits: [FIRST])
+    second = record_intent!(summary: "Second reasoning", commits: [FIRST])
+
+    span = blame([40, FIRST]).fetch("spans").sole
+
+    assert_equal([first["intent_id"], second["intent_id"]], span["intents"].map { |i| i["intent_id"] })
+  end
+
   def test_the_version_control_system_defaults_to_git
     assert_equal "git", blame([40, FIRST]).fetch("spans").sole.dig("asset_version", "vcs")
   end
@@ -132,7 +143,16 @@ class BlamePorcelainFormatTest < Minitest::Test
     span = run_cli_ok!("blame", "--format", "git-porcelain",
                        stdin: porcelain([SHA, 7])).fetch("spans").sole
 
-    refute span["uncommitted"]
+    assert_nil span["uncommitted"]
+  end
+
+  # The system name is lowercased on input everywhere else, and the uncommitted
+  # marker is a git convention, so it has to be recognised under "Git" too.
+  def test_an_uncommitted_line_is_recognised_whatever_case_the_system_is_named_in
+    span = run_cli_ok!("blame", stdin: { "vcs" => "Git", "lines" => [{ "line" => 3, "external_id" => UNCOMMITTED }] })
+           .fetch("spans").sole
+
+    assert span["uncommitted"]
   end
 
   def test_an_unknown_format_is_refused

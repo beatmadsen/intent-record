@@ -6,6 +6,11 @@ require "test_helper"
 # whole match set for every candidate row, eight seconds for a common word,
 # while computing it once over the match set costs a hundredth of a second.
 # The two answer identically, so nothing but the plan can tell them apart.
+#
+# The words asserted on, MATERIALIZE and CORRELATED SCALAR SUBQUERY, are
+# SQLite's own, read on 3.53.2. A later SQLite that renames them would turn
+# this red without the query having changed, and that is the first thing to
+# check.
 class SearchRankingPlanTest < Minitest::Test
   include DbTestSetup
 
@@ -34,6 +39,8 @@ class SearchRankingPlanTest < Minitest::Test
     assert_equal 1, correlated_index_lookups(plan_for_search("retry"))
     assert_equal 2, correlated_index_lookups(plan_for_search("retry", "fetch"))
   end
+
+  private
 
   def correlated_index_lookups(plan)
     plan.each_cons(2).count { |a, b| a.match?(/CORRELATED SCALAR SUBQUERY/) && b.match?(/intent_search/) }

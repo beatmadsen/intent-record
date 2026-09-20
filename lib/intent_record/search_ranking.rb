@@ -1,4 +1,4 @@
-require_relative "match_expression"
+require_relative "search_index"
 require_relative "search_snippet"
 
 module IntentRecord
@@ -14,7 +14,7 @@ module IntentRecord
   # A record the index cannot see scores nothing and sorts after every record it
   # can, which is the right place for a hit the terms only touch as a substring.
   module SearchRanking
-    TABLE = "intent_search".freeze
+    TABLE = SearchIndex::TABLE
     ALIAS = "ranking".freeze
 
     # Weights per indexed column, in the order the index declares them. A term in
@@ -62,18 +62,8 @@ module IntentRecord
 
     ORDER = "COALESCE(#{ALIAS}.relevance, #{NO_MATCH_SCORE}) ASC, #{TIE_BREAK}".freeze
 
-    module_function
-
-    def join_template
-      JOIN
-    end
-
-    def order_sql
-      ORDER
-    end
-
-    def expression_for(terms)
-      MatchExpression.for(terms)
-    end
+    # What a search selects when it ranks: the record, and the fragment the
+    # subquery found for it.
+    SELECTION = "intent_records.*, #{ALIAS}.#{SearchSnippet::COLUMN} AS #{SearchSnippet::COLUMN}".freeze
   end
 end

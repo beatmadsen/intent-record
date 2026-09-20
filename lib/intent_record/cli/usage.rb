@@ -33,8 +33,8 @@ module IntentRecord
         Ranked best first. A plain word also matches its other forms, so `retry`
         finds "retried". A term carrying punctuation is matched literally, so
         `100%` does not match "100 percent". A term may name one field:
-        summary:retry, body:retry, uri:ACME-42, title:flaky. Only those four
-        names count, so a ticket url is searched as itself.
+        summary:retry, body:retry, uri:ACME-42, title:flaky. The name is read in
+        any case. Only those four names count, so a ticket url is searched as itself.
 
       Input shape for blame (vcs defaults to git):
         {"vcs": "git", "lines": [{"line": 40, "external_id": "<hash>"}]}

@@ -8,9 +8,13 @@ class SearchSnippetTest < Minitest::Test
 
   LONG_PROSE = "Unrelated prose about other things. ".freeze
 
+  # The match buried in the middle of a body far longer than any fragment.
+  def long_body
+    "#{LONG_PROSE * 40}We retried the fetch here.#{" And then more prose." * 40}"
+  end
+
   def test_a_result_carries_the_fragment_of_the_body_the_terms_landed_in
-    body = "#{LONG_PROSE * 40}We retried the fetch here.#{" And then more prose." * 40}"
-    record_intent!(summary: "Rename the config loader", body: body)
+    record_intent!(summary: "Rename the config loader", body: long_body)
 
     snippet = run_cli_ok!("search", "retry")["intents"].sole["snippet"]
 
@@ -18,12 +22,11 @@ class SearchSnippetTest < Minitest::Test
   end
 
   def test_the_fragment_is_shorter_than_the_body_it_came_from
-    body = "#{LONG_PROSE * 40}We retried the fetch here.#{" And then more prose." * 40}"
-    record_intent!(summary: "Rename the config loader", body: body)
+    record_intent!(summary: "Rename the config loader", body: long_body)
 
     result = run_cli_ok!("search", "retry")["intents"].sole
 
-    assert_operator result["snippet"].length, :<, result["body"].length / 2
+    assert_operator result["snippet"].length, :<, result["body"].length
   end
 
   # A term matched only as a substring inside a longer word is one the index

@@ -6,28 +6,24 @@ require "test_helper"
 class SearchFieldTest < Minitest::Test
   include IntentRecordDsl
 
-  def found(*argv)
-    run_cli_ok!("search", *argv)["intents"].map { |r| r["intent_id"] }
-  end
-
   def test_naming_the_summary_excludes_a_match_found_only_in_a_body
     hit = record_intent!(summary: "Retry the fetch", body: "Nothing telling.")
     record_intent!(summary: "Nothing telling", body: "We retry the fetch.")
 
-    assert_equal([hit["intent_id"]], found("summary:retry"))
+    assert_equal([hit["intent_id"]], found_by_search("summary:retry"))
   end
 
   def test_naming_the_body_excludes_a_match_found_only_in_a_summary
     record_intent!(summary: "Retry the fetch", body: "Nothing telling.")
     hit = record_intent!(summary: "Nothing telling", body: "We retry the fetch.")
 
-    assert_equal([hit["intent_id"]], found("body:retry"))
+    assert_equal([hit["intent_id"]], found_by_search("body:retry"))
   end
 
   def test_naming_a_field_still_matches_the_other_forms_of_a_word
     hit = record_intent!(summary: "Retried the fetch", body: "b")
 
-    assert_equal([hit["intent_id"]], found("summary:retry"))
+    assert_equal([hit["intent_id"]], found_by_search("summary:retry"))
   end
 
   def test_a_ticket_uri_can_be_named_as_the_field
@@ -35,7 +31,7 @@ class SearchFieldTest < Minitest::Test
     hit = record_intent!(summary: "Nothing telling", body: "b", stakeholder_references: refs)
     record_intent!(summary: "ACME-42 in the summary", body: "b")
 
-    assert_equal([hit["intent_id"]], found("uri:acme-42"))
+    assert_equal([hit["intent_id"]], found_by_search("uri:acme-42"))
   end
 
   # The hazard this feature brings with it. A ticket URL has a colon in it and
@@ -48,21 +44,29 @@ class SearchFieldTest < Minitest::Test
     hit = record_intent!(summary: "Nothing telling", body: "b", stakeholder_references: refs)
     record_intent!(summary: "Mentions //j/browse/ACME-42 without the scheme", body: "b")
 
-    assert_equal([hit["intent_id"]], found("https://j/browse/ACME-42"))
+    assert_equal([hit["intent_id"]], found_by_search("https://j/browse/ACME-42"))
   end
 
   def test_an_unknown_name_before_a_colon_is_part_of_the_term
     hit = record_intent!(summary: "Wrote author:erik in the summary", body: "b")
     record_intent!(summary: "Mentions erik alone", body: "b")
 
-    assert_equal([hit["intent_id"]], found("author:erik"))
+    assert_equal([hit["intent_id"]], found_by_search("author:erik"))
   end
 
   def test_a_space_after_the_field_name_does_not_stop_the_term_matching
     refs = [{ "system" => "jira", "uri" => "https://j/browse/ACME-42" }]
     hit = record_intent!(summary: "Nothing telling", body: "b", stakeholder_references: refs)
 
-    assert_equal([hit["intent_id"]], found("uri: acme-42"))
+    assert_equal([hit["intent_id"]], found_by_search("uri: acme-42"))
+  end
+
+  def test_a_named_field_and_a_plain_term_can_both_be_required
+    hit = record_intent!(summary: "Retry the fetch", body: "with backoff")
+    record_intent!(summary: "Retry the fetch", body: "no delay")
+    record_intent!(summary: "Rename", body: "retry with backoff")
+
+    assert_equal([hit["intent_id"]], found_by_search("summary:retry", "backoff", "--match", "all"))
   end
 
   def test_naming_a_field_with_nothing_to_look_for_is_refused

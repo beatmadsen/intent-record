@@ -33,6 +33,16 @@ class FormattingAListDoesNotQueryPerRecordTest < Minitest::Test
     assert_equal queries_for_blame(1), queries_for_blame(5)
   end
 
+  # A payload of only uncommitted lines names no commit the store could know,
+  # so there is nothing to ask it.
+  def test_blame_asks_the_store_nothing_when_every_span_is_uncommitted
+    lines = [{ "line" => 1, "external_id" => "0" * 40 }]
+
+    queries = queries_while { IntentRecord::Commands::Blame.new.call("lines" => lines) }
+
+    assert_empty queries.grep(/asset_versions/)
+  end
+
   # Those above would pass just as well if nothing were formatted, or if the
   # counter saw nothing, so both are checked.
   def test_every_seeded_record_is_formatted
@@ -73,11 +83,17 @@ class FormattingAListDoesNotQueryPerRecordTest < Minitest::Test
   end
 
   # Each line names a different commit, so the spans cannot collapse and the
-  # payload really does ask about `count` separate changes.
+  # payload really does ask about `count` separate changes. The ids are the
+  # ones `seed` gives its commits; a payload naming commits the seed did not
+  # write would find nothing and measure a lookup of nothing.
   def queries_for_blame(count)
     reset(count)
-    lines = (1..count).map { |n| { "line" => n, "external_id" => format("%040d", n) } }
+    lines = (1..count).map { |n| { "line" => n, "external_id" => seeded_commit(n) } }
     queries_while { IntentRecord::Commands::Blame.new.call("lines" => lines) }.size
+  end
+
+  def seeded_commit(number)
+    format("%040d", number)
   end
 
   def reset(count, **shared)
@@ -88,7 +104,7 @@ class FormattingAListDoesNotQueryPerRecordTest < Minitest::Test
   def seed(count, commit: nil, uri: nil)
     (1..count).each do |n|
       IntentRecord::Commands::Record.new.call(
-        "summary" => "intent #{n}", "body" => "b", "commits" => [commit || format("%040d", n)],
+        "summary" => "intent #{n}", "body" => "b", "commits" => [commit || seeded_commit(n)],
         "stakeholder_references" => [{ "system" => "jira", "uri" => uri || "https://j/#{n}", "title" => "T#{n}" }]
       )
     end

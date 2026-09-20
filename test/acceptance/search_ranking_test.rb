@@ -13,9 +13,25 @@ class SearchRankingTest < Minitest::Test
     in_passing = record_intent!(summary: "Rename the config loader",
                                 body: "#{"Unrelated prose. " * 60}Left the retry alone.")
 
-    ranked = run_cli_ok!("search", "retry")["intents"].map { |r| r["intent_id"] }
+    ranked = found_by_search("retry")
 
     assert_equal [on_topic["intent_id"], in_passing["intent_id"]], ranked
+  end
+end
+
+# What COALESCE(relevance, 0.0) exists for. A record the index matched has a
+# negative score and a record found only as a substring has none, and the two
+# must sort in that order rather than wherever NULL happens to fall.
+class SearchSubstringOnlyRankTest < Minitest::Test
+  include IntentRecordDsl
+
+  def test_a_record_the_index_matched_outranks_one_found_only_as_a_substring
+    by_substring = record_intent!(summary: "Refactoring the loader", body: "b")
+    by_index = record_intent!(summary: "Retry the fetch", body: "b")
+
+    ranked = found_by_search("retry", "factor")
+
+    assert_equal [by_index["intent_id"], by_substring["intent_id"]], ranked
   end
 end
 
@@ -26,14 +42,10 @@ end
 class SearchStemmingTest < Minitest::Test
   include IntentRecordDsl
 
-  def found(*argv)
-    run_cli_ok!("search", *argv)["intents"].map { |r| r["intent_id"] }
-  end
-
   def test_a_term_matches_another_form_of_the_same_word
     hit = record_intent!(summary: "Retry the fetch", body: "Because flaky.")
 
-    assert_equal([hit["intent_id"]], found("retrying"))
+    assert_equal([hit["intent_id"]], found_by_search("retrying"))
   end
 
   # `retried` does not contain `retry`, so substring matching cannot reach it and
@@ -42,7 +54,7 @@ class SearchStemmingTest < Minitest::Test
   def test_a_stem_match_reaches_the_body_as_well_as_the_summary
     hit = record_intent!(summary: "Nothing telling", body: "We retried the fetch.")
 
-    assert_equal([hit["intent_id"]], found("retry"))
+    assert_equal([hit["intent_id"]], found_by_search("retry"))
   end
 
   # The line stemming must not cross. `100%` tokenises to `100`, so a term that
@@ -53,14 +65,14 @@ class SearchStemmingTest < Minitest::Test
     hit = record_intent!(summary: "100% done", body: "b")
     record_intent!(summary: "100 percent", body: "b")
 
-    assert_equal([hit["intent_id"]], found("100%"))
+    assert_equal([hit["intent_id"]], found_by_search("100%"))
   end
 
   def test_an_underscored_term_is_matched_as_the_literal_it_is
     hit = record_intent!(summary: "done_now", body: "b")
     record_intent!(summary: "done now", body: "b")
 
-    assert_equal([hit["intent_id"]], found("done_now"))
+    assert_equal([hit["intent_id"]], found_by_search("done_now"))
   end
 end
 
@@ -70,20 +82,16 @@ end
 class SearchPhraseTest < Minitest::Test
   include IntentRecordDsl
 
-  def found(*argv)
-    run_cli_ok!("search", *argv)["intents"].map { |r| r["intent_id"] }
-  end
-
   def test_a_quoted_phrase_matches_the_words_in_that_order
     hit = record_intent!(summary: "Retry the fetch on failure", body: "b")
 
-    assert_equal([hit["intent_id"]], found("retry the fetch"))
+    assert_equal([hit["intent_id"]], found_by_search("retry the fetch"))
   end
 
   def test_a_quoted_phrase_does_not_match_the_same_words_apart
     record_intent!(summary: "Retry it, then fetch again", body: "b")
 
-    assert_empty found("retry the fetch")
+    assert_empty found_by_search("retry the fetch")
   end
 
   # The words are still stemmed inside a phrase, so the phrase does not have to
@@ -91,7 +99,7 @@ class SearchPhraseTest < Minitest::Test
   def test_a_quoted_phrase_matches_another_form_of_its_words
     hit = record_intent!(summary: "Nothing telling", body: "We retried the fetches twice.")
 
-    assert_equal([hit["intent_id"]], found("retry the fetch"))
+    assert_equal([hit["intent_id"]], found_by_search("retry the fetch"))
   end
 end
 
@@ -106,7 +114,7 @@ class SearchUnrankableTermTest < Minitest::Test
     hit = record_intent!(summary: "Uses ... as a separator", body: "b")
     record_intent!(summary: "Plain record", body: "b")
 
-    found = run_cli_ok!("search", "...")["intents"].map { |r| r["intent_id"] }
+    found = found_by_search("...")
 
     assert_equal([hit["intent_id"]], found)
   end
@@ -117,7 +125,7 @@ class SearchUnrankableTermTest < Minitest::Test
     older = record_intent!(summary: "First ... separator", body: "b")
     newer = record_intent!(summary: "Second ... separator", body: "b")
 
-    found = run_cli_ok!("search", "...")["intents"].map { |r| r["intent_id"] }
+    found = found_by_search("...")
 
     assert_equal([newer["intent_id"], older["intent_id"]], found)
   end

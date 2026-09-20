@@ -29,6 +29,7 @@ module IntentRecord
       WORD.match?(term.to_s)
     end
 
+    # Takes SearchTerms, which carry the text and the column the person named.
     def for(terms)
       phrases = terms.map { |term| phrase(term) }.compact
       return nil if phrases.empty?
@@ -37,18 +38,16 @@ module IntentRecord
     end
 
     def phrase(term)
-      text = term.respond_to?(:text) ? term.text : term
       # A term of pure punctuation tokenises to nothing, and an empty phrase is
       # a syntax error rather than a phrase that matches nothing.
-      return nil unless text.to_s.match?(/[[:alnum:]]/)
+      return nil unless term.text.match?(/[[:alnum:]]/)
 
-      column(term) + quoted(text)
+      column(term.index_column) + quoted(term.text)
     end
 
     # FTS5 reads `summary:"retry"` as that phrase in that column only. A term
     # naming no column is left unprefixed and is answered over all of them.
-    def column(term)
-      name = term.respond_to?(:index_column) ? term.index_column : nil
+    def column(name)
       name.nil? ? "" : "#{name}:"
     end
 

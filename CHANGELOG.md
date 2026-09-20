@@ -12,7 +12,7 @@ Notable changes, one section per released version. The format follows
 
 - `blame`, which answers "why is this line here" for a range of lines. Blame output goes in on stdin, so the tool still never shells out to git and the same command works for Perforce or Mercurial. `--format git-porcelain` reads what `git blame --porcelain` prints, so the common case is one command.
 - Neighbouring lines from one change are answered once, as a span. A change the store has never heard of still gets a span, with no intents, and a line you have edited but not committed is marked `uncommitted`.
-- A search term can name one field: `summary:retry`, `body:retry`, `uri:ACME-42`, `title:flaky`. Only those four names count, so a ticket url is still searched as itself.
+- A search term can name one field: `summary:retry`, `body:retry`, `uri:ACME-42`, `title:flaky`. The name is read in any case. Only those four names count, so a ticket url is still searched as itself.
 
 ### Changed
 

@@ -57,7 +57,7 @@ module IntentRecord
       def intents(version)
         return [] if version.nil?
 
-        version.intent_records.sort_by(&:created_at).map { |record| Formatter.full(record) }
+        version.intent_records.map { |record| Formatter.full(record) }
       end
 
       # Read once for the whole payload rather than per span. A blamed range is a

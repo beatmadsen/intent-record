@@ -63,6 +63,11 @@ module IntentRecordDsl
     assert_match BASE58_PATTERN, value.to_s, "expected a 7-character base58 id, got #{value.inspect}"
   end
 
+  # The ids a search answers with, in the order it answers.
+  def found_by_search(*argv)
+    run_cli_ok!("search", *argv)["intents"].map { |r| r["intent_id"] }
+  end
+
   def record_intent!(summary: "Test intent", body: "Because reasons.", **extra)
     run_cli_ok!("record", stdin: { "summary" => summary, "body" => body }.merge(extra.transform_keys(&:to_s)))
   end

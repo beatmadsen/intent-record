@@ -1,3 +1,5 @@
+require_relative "search_index"
+
 module IntentRecord
   # What a search result shows instead of the whole body.
   #
@@ -21,7 +23,7 @@ module IntentRecord
     # is either escaped into visible markup or trusted, and neither is wanted.
     # Column 1 is the body. Evaluated inside SearchRanking's subquery, which is
     # the one place a search still holds the index's context.
-    EXPRESSION = "snippet(intent_search, 1, '', '', '#{ELLIPSIS}', #{INDEX_TOKENS})".freeze
+    EXPRESSION = "snippet(#{SearchIndex::TABLE}, 1, '', '', '#{ELLIPSIS}', #{INDEX_TOKENS})".freeze
 
     COLUMN = "snippet".freeze
 

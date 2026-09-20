@@ -1,4 +1,5 @@
 require_relative "../formatter"
+require_relative "../match_expression"
 require_relative "../search_membership"
 require_relative "../search_ranking"
 require_relative "../search_snippet"
@@ -41,7 +42,7 @@ module IntentRecord
       end
 
       def matching_records
-        Formatter.preloaded(ranked(matching_scope))
+        Formatter.preloaded(with_ranking(matching_scope))
       end
 
       def matching_scope
@@ -58,17 +59,17 @@ module IntentRecord
         @terms.select(&:indexable?)
       end
 
+      # Joins the relevance and fragment the index found, and orders by them.
       # Terms that hold no searchable token leave nothing to rank, and an empty
-      # MATCH is a syntax error rather than an expression matching nothing. With
-      # nothing to rank there is no fragment either, and the body stands in.
-      def ranked(scope)
-        expression = SearchRanking.expression_for(indexable)
+      # MATCH is a syntax error rather than an expression matching nothing, so
+      # that case orders by the tie-break alone and the body stands in for the
+      # fragment.
+      def with_ranking(scope)
+        expression = MatchExpression.for(indexable)
         return scope.order(Arel.sql(SearchRanking::TIE_BREAK)) if expression.nil?
 
-        join = Models::IntentRecord.sanitize_sql_array([SearchRanking.join_template, expression])
-        scope.select("intent_records.*, #{SearchRanking::ALIAS}.#{SearchSnippet::COLUMN} AS #{SearchSnippet::COLUMN}")
-             .joins(join)
-             .order(Arel.sql(SearchRanking.order_sql))
+        join = Models::IntentRecord.sanitize_sql_array([SearchRanking::JOIN, expression])
+        scope.select(SearchRanking::SELECTION).joins(join).order(Arel.sql(SearchRanking::ORDER))
       end
     end
   end
