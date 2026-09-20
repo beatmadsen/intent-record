@@ -16,6 +16,8 @@ end
 require "intent_record/config"
 require "intent_record/database"
 require "intent_record/global_id"
+require "intent_record/match_expression"
+require "intent_record/search_ranking"
 require "intent_record/application_record"
 require "intent_record/models/vcs_system"
 require "intent_record/models/asset_version"
